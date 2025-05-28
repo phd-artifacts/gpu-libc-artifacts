@@ -1,0 +1,3 @@
+[submodule "llvm-infra/llvm-project"]
+	path = llvm-infra/llvm-project
+	url = git@github.com:llvm/llvm-project.git
