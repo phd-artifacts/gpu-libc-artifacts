@@ -39,6 +39,10 @@ jobs:
 
       - name: Download SIF image
         if: steps.cache-sif.outputs.cache-hit != 'true'
+        env:
+          APPTAINER_CACHEDIR: ${{ github.workspace }}/sifs/.cache
+          SINGULARITY_CACHEDIR: ${{ github.workspace }}/sifs/.cache
+          APPTAINER_TMPDIR: ${{ github.workspace }}/sifs/.cache/tmp
         run: |
           cd sifs
           bash get_image.sh

@@ -1,5 +1,14 @@
 # this is an apptainer that I froze to build llvm
 # for some reason this is not working on sorgan
-mkdir -p $(realpath .cache)
-chmod -R u+rwx $(realpath .cache)
-APPTAINER_NOHTTPS=1 APPTAINER_CACHEDIR=$(realpath .cache) apptainer pull docker://rodrigoceccato/ompc-base:latest
+set -e
+
+CACHE_DIR=$(realpath .cache)
+TMP_DIR="$CACHE_DIR/tmp"
+mkdir -p "$TMP_DIR"
+chmod -R u+rwx "$CACHE_DIR"
+
+APPTAINER_NOHTTPS=1 \
+APPTAINER_CACHEDIR="$CACHE_DIR" \
+APPTAINER_TMPDIR="$TMP_DIR" \
+SINGULARITY_CACHEDIR="$CACHE_DIR" \
+apptainer pull docker://rodrigoceccato/ompc-base:latest
