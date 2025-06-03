@@ -15,18 +15,18 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
 
       - name: Install Apptainer
         run: |
           sudo apt-get update
-          sudo apt-get install -y apptainer || sudo apt-get install -y singularity-container
+          sudo apt-get install -y --no-install-recommends apptainer \
+            || sudo apt-get install -y --no-install-recommends singularity-container
           if ! command -v apptainer >/dev/null && command -v singularity >/dev/null; then
             sudo ln -s $(command -v singularity) /usr/local/bin/apptainer
           fi
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo rm -rf /usr/share/doc /usr/share/man /usr/share/locale
 
       - name: Restore SIF from cache
         id: cache-sif
