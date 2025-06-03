@@ -1,97 +1,159 @@
 import os
-import click
+import sys
 import subprocess
+from pathlib import Path
+import click
 
 # =============================================================================
 # Constants and Path Definitions
 # =============================================================================
 
-# Path to the Singularity/Apptainer container image
-CONTAINER_IMAGE_PATH = os.path.abspath("sifs/ompc-base_latest.sif")
+SCRIPT_DIRECTORY = Path(__file__).resolve().parent
+REPO_ROOT_DIRECTORY = SCRIPT_DIRECTORY
 
-# Directory paths
-SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))  # Location of this script
-REPO_ROOT_DIRECTORY = os.path.abspath(os.path.join(SCRIPT_DIRECTORY, "."))  # Script is at the repo root
-
-# Shell scripts directory
-SCRIPTS_DIRECTORY = os.path.join(REPO_ROOT_DIRECTORY, "sh-scripts")
-SET_ENV_SCRIPT_PATH = os.path.abspath(os.path.join(SCRIPTS_DIRECTORY, "set_env.sh"))
-
-# LLVM installation path
-INSTALL_DIRECTORY = os.path.abspath(
-    os.path.join(REPO_ROOT_DIRECTORY, "llvm-infra/llvm-builds/apptainer-Debug")
+CONTAINER_IMAGE_PATH = (REPO_ROOT_DIRECTORY / "sifs" / "ompc-base_latest.sif").resolve()
+SCRIPTS_DIRECTORY = REPO_ROOT_DIRECTORY / "sh-scripts"
+SET_ENV_SCRIPT_PATH = (SCRIPTS_DIRECTORY / "set_env.sh").resolve()
+INSTALL_DIRECTORY = (
+    REPO_ROOT_DIRECTORY / "llvm-infra" / "llvm-builds" / "apptainer-Debug"
 )
+
+# Determine if we are on a CI environment (to skip apptainer).
+IS_CI_ENV = os.getenv("IS_CI_ENV", "false").lower() == "true"
 
 # =============================================================================
 # Helper Functions
 # =============================================================================
 
-def execute_command(command, working_directory=REPO_ROOT_DIRECTORY):
-    """
-    Execute a shell command in a specified directory.
-
-    :param command: Shell command to be executed (string).
-    :param working_directory: Path where the command will be executed (string).
-    """
-    click.echo(f"Executing command in {working_directory}:\n  {command}")
+def execute_command(
+    command_list: list[str], working_directory: Path = REPO_ROOT_DIRECTORY
+) -> None:
+    click.echo(f"Executing in {working_directory}:\n  {' '.join(command_list)}")
     try:
-        subprocess.run(command, shell=True, check=True, cwd=working_directory)
+        subprocess.run(command_list, check=True, cwd=working_directory)
     except subprocess.CalledProcessError as error:
         click.secho(f"Error: {error}", fg="red")
-        exit(1)
+        sys.exit(1)
 
-def build_application(clean, run_cmake):
-    """
-    Build (compile) the application inside the container.
 
-    :param clean: Boolean indicating whether to perform a clean build.
-    """
-    build_script_path = os.path.join(SCRIPTS_DIRECTORY, "build_llvm.sh")
-    run_cmake_option = "--run-cmake" if run_cmake else ""
-    clean_option = "--clean" if clean else ""
-    command = f"apptainer exec --nv --bind {SCRIPT_DIRECTORY} {CONTAINER_IMAGE_PATH} {build_script_path} {clean_option} {run_cmake_option}"
-    execute_command(command)
+def apptainer_exec(
+    command_list: list[str], working_directory: Path = REPO_ROOT_DIRECTORY
+) -> None:
+    if not CONTAINER_IMAGE_PATH.is_file():
+        click.secho(
+            f"Error: Container image not found at {CONTAINER_IMAGE_PATH}", fg="red"
+        )
+        sys.exit(1)
 
-def run_application():
-    """
-    Run the compiled application inside the container.
-    Sources the environment script before executing the application.
-    """
-    application_script = "./run.sh"
-    # Note: We don't surround the entire bash command in double quotes.
-    # That way Apptainer sees 'bash -c ...' as the command, rather than a single path.
-    command = (
-        f"apptainer exec --nv --bind {SCRIPT_DIRECTORY} {CONTAINER_IMAGE_PATH} "
-        f"bash -c 'source {SET_ENV_SCRIPT_PATH} {INSTALL_DIRECTORY} && {application_script}'"
-    )
-    # The working directory is where `run.sh` is located
-    execute_command(command, working_directory="./application/file-open")
+    base_cmd = [
+        "apptainer",
+        "exec",
+        "--userns",
+        "--no-privs",
+        "--bind",
+        str(SCRIPT_DIRECTORY),
+        str(CONTAINER_IMAGE_PATH),
+    ]
+    full_command = base_cmd + command_list
+    execute_command(full_command, working_directory)
 
-def main_cli(build, run, clean, run_cmake):
-    """
-    Main logic to handle user commands.
 
-    :param build: Boolean indicating if the user wants to build the application.
-    :param run: Boolean indicating if the user wants to run the application.
-    :param clean: Boolean indicating if a clean build is desired.
-    """
-    if build:
-        build_application(clean, run_cmake)
-    if run:
-        run_application()
+def run_in_environment(
+    command_list: list[str], working_directory: Path = REPO_ROOT_DIRECTORY
+) -> None:
+    if IS_CI_ENV:
+        execute_command(command_list, working_directory)
+    else:
+        apptainer_exec(command_list, working_directory)
 
-# =============================================================================
-# CLI Setup
-# =============================================================================
 
-@click.command()
-@click.option('--build', '-b', is_flag=True, help="Build the application.")
-@click.option('--run', '-r', is_flag=True, help="Run the application.")
-@click.option('--clean', '-c', is_flag=True, help="Clean build before compiling.")
-@click.option('--run-cmake', '-m', is_flag=True, help="Re-run cmake before build.")
-def cli(build, run, clean, run_cmake):
-    """Command Line Interface for building and running the application."""
-    main_cli(build, run, clean, run_cmake)
+def build_application(clean: bool = False, run_cmake: bool = False) -> None:
+    build_script_path = SCRIPTS_DIRECTORY / "build_llvm.sh"
+    command_list = [str(build_script_path)]
+    if clean:
+        command_list.append("--clean")
+    if run_cmake:
+        command_list.append("--run-cmake")
+    run_in_environment(command_list)
+
+
+def run_ninja_command() -> None:
+    run_in_environment(["bash", "-c", f"cd {INSTALL_DIRECTORY} && ninja"])
+
+
+def run_file_build_command() -> None:
+    run_in_environment([
+        "bash",
+        "-c",
+        f"cd {INSTALL_DIRECTORY} && ninja copy_ompfile_headers libompfile.so",
+    ])
+
+
+def run_application(application_folder: str) -> None:
+    application_directory = (REPO_ROOT_DIRECTORY / "application" / application_folder).resolve()
+    run_in_environment([
+        "bash",
+        "-c",
+        f"source {SET_ENV_SCRIPT_PATH} {INSTALL_DIRECTORY} && ./run.sh"
+    ], working_directory=application_directory)
+
+
+def print_shell_help() -> None:
+    base_shell_cmd = [
+        "apptainer",
+        "shell",
+        "--bind",
+        str(SCRIPT_DIRECTORY),
+        str(CONTAINER_IMAGE_PATH),
+    ]
+    env_cmd = f"source {SET_ENV_SCRIPT_PATH} {INSTALL_DIRECTORY}"
+
+    click.echo("To open an Apptainer shell, run:")
+    click.echo(f"  {' '.join(base_shell_cmd)}")
+    click.echo("\nThen inside that shell, you might run:")
+    click.echo(f"  {env_cmd}")
+    click.echo("to source the environment.\n")
+
+
+@click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
+@click.argument("application_folder", required=True)
+@click.pass_context
+def cli(ctx, application_folder):
+    leftover_args = list(ctx.args)
+
+    while leftover_args:
+        cmd = leftover_args.pop(0)
+
+        if cmd == "build":
+            clean = False
+            run_cmake = False
+            while leftover_args and leftover_args[0].startswith("--"):
+                flag = leftover_args.pop(0)
+                if flag == "--clean":
+                    clean = True
+                elif flag == "--run-cmake":
+                    run_cmake = True
+                else:
+                    click.secho(f"Unknown option: {flag}", fg="red")
+                    sys.exit(1)
+            build_application(clean, run_cmake)
+
+        elif cmd == "run":
+            run_application(application_folder)
+
+        elif cmd == "shell":
+            print_shell_help()
+
+        elif cmd == "ninja":
+            run_ninja_command()
+
+        elif cmd == "file-build":
+            run_file_build_command()
+
+        else:
+            click.secho(f"Unknown command: {cmd}", fg="red")
+            sys.exit(1)
+
 
 if __name__ == "__main__":
     cli()
