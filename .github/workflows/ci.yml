@@ -24,6 +24,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apptainer || sudo apt-get install -y singularity-container
+          if ! command -v apptainer >/dev/null && command -v singularity >/dev/null; then
+            sudo ln -s $(command -v singularity) /usr/local/bin/apptainer
+          fi
 
       - name: Restore SIF from cache
         id: cache-sif
