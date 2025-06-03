@@ -25,11 +25,14 @@ export LLVM_DIR="$INSTALL_PATH/lib/cmake/llvm"
 #export LD_LIBRARY_PATH="$INSTALL_PATH/lib:$INSTALL_PATH/lib/x86_64-unknown-linux-gnu:$LD_LIBRARY_PATH"
 #export LIBRARY_PATH="$INSTALL_PATH/lib:$INSTALL_PATH/lib/x86_64-unknown-linux-gnu:$LIBRARY_PATH"
 
-CLANG_INCLUDE_PATH=(${SELECTED_CLANG}/lib/clang/*/include)
-export PATH=${SELECTED_CLANG}/bin:$PATH
-export LD_LIBRARY_PATH=${SELECTED_CLANG}/lib/x86_64-unknown-linux-gnu:${SELECTED_CLANG}/lib:$LD_LIBRARY_PATH
-export LIBRARY_PATH=${SELECTED_CLANG}/lib:$LIBRARY_PATH
-export CPATH=$CLANG_INCLUDE_PATH:$CPATH
+# Collect all Clang include directories and convert the list into a
+# colon-separated path. Using an array here would only export the first entry,
+# so we perform the glob expansion and join the results explicitly.
+CLANG_INCLUDE_PATH=$(echo "${SELECTED_CLANG}"/lib/clang/*/include | tr ' ' ':')
+export PATH="${SELECTED_CLANG}/bin:$PATH"
+export LD_LIBRARY_PATH="${SELECTED_CLANG}/lib/x86_64-unknown-linux-gnu:${SELECTED_CLANG}/lib:$LD_LIBRARY_PATH"
+export LIBRARY_PATH="${SELECTED_CLANG}/lib:$LIBRARY_PATH"
+export CPATH="${CLANG_INCLUDE_PATH}:$CPATH"
 
 #omp headers: projects/openmp/runtime/src
 omp_header_path=${SELECTED_CLANG}/projects/openmp/runtime/src
