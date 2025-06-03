@@ -11,4 +11,4 @@ APPTAINER_NOHTTPS=1 \
 APPTAINER_CACHEDIR="$CACHE_DIR" \
 APPTAINER_TMPDIR="$TMP_DIR" \
 SINGULARITY_CACHEDIR="$CACHE_DIR" \
-apptainer pull docker://rodrigoceccato/ompc-base:latest
+apptainer pull --disable-cache --force docker://rodrigoceccato/ompc-base:latest
