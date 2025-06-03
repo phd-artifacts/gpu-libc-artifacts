@@ -2,8 +2,10 @@
 # for some reason this is not working on sorgan
 set -e
 
-CACHE_DIR=$(realpath .cache)
-TMP_DIR="$CACHE_DIR/tmp"
+# allow the caller to override cache directories
+CACHE_DIR="${APPTAINER_CACHEDIR:-$(realpath .cache)}"
+TMP_DIR="${APPTAINER_TMPDIR:-$CACHE_DIR/tmp}"
+
 mkdir -p "$TMP_DIR"
 chmod -R u+rwx "$CACHE_DIR"
 

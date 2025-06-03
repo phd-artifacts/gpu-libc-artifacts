@@ -28,6 +28,13 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/*
           sudo rm -rf /usr/share/doc /usr/share/man /usr/share/locale
 
+      - name: Restore Apptainer cache
+        id: cache-dir
+        uses: actions/cache@v3
+        with:
+          path: sifs/.cache
+          key: ${{ runner.os }}-apptainer-cache-${{ hashFiles('sifs/get_image.sh') }}
+
       - name: Restore SIF from cache
         id: cache-sif
         uses: actions/cache@v3
@@ -38,9 +45,9 @@ jobs:
       - name: Download SIF image
         if: steps.cache-sif.outputs.cache-hit != 'true'
         env:
-          APPTAINER_CACHEDIR: ${{ runner.temp }}/apptainer/cache
-          SINGULARITY_CACHEDIR: ${{ runner.temp }}/apptainer/cache
-          APPTAINER_TMPDIR: ${{ runner.temp }}/apptainer/tmp
+          APPTAINER_CACHEDIR: ${{ github.workspace }}/sifs/.cache
+          SINGULARITY_CACHEDIR: ${{ github.workspace }}/sifs/.cache
+          APPTAINER_TMPDIR: ${{ github.workspace }}/sifs/.cache/tmp
         run: |
           cd sifs
           bash get_image.sh
