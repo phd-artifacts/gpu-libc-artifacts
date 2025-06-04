@@ -28,6 +28,15 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/*
           sudo rm -rf /usr/share/doc /usr/share/man /usr/share/locale
 
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"/CodeQL
+          df -h
+
       - name: Restore Apptainer cache
         id: cache-dir
         uses: actions/cache@v3
