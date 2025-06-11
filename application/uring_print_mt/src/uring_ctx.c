@@ -34,10 +34,15 @@ int setup_uring(uring_ctx_t *ctx) {
   int sring_sz, cring_sz;
 
   memset(&p, 0, sizeof(p));
-  //   p.flags |= IORING_SETUP_SQPOLL;
+  p.flags |= IORING_SETUP_SQPOLL;
   //   p.sq_thread_idle = 1; // in micro seconds
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
+
+  // register stderr
+  int fds[] = { STDERR_FILENO }; // STDERR_FILENO == 2
+//   int ret = io_uring_register(ctx->ring_fd, IORING_REGISTER_FILES, fds, 1);
+//   assert(ret == 0);
   assert(ctx->ring_fd >= 0);
 
   /* Compute how many bytes we need to mmap for SQ ring and CQ ring. */
@@ -83,6 +88,8 @@ int setup_uring(uring_ctx_t *ctx) {
   ctx->cring_mask = (unsigned *)((char *)cq_ptr + p.cq_off.ring_mask);
   ctx->cqes = (struct io_uring_cqe *)((char *)cq_ptr + p.cq_off.cqes);
 
+
+
   return 0;
 }
 
@@ -98,7 +105,8 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   /* prepare SQE for stderr write */
   memset(sqe, 0, sizeof(*sqe));
   sqe->opcode = IORING_OP_WRITE;
-  sqe->fd = STDERR_FILENO;
+//   sqe->fd = STDERR_FILENO;
+  sqe->fd = 0; // idx in registered buffer
   sqe->addr = (unsigned long)buff;
   sqe->len = msg_len;
   sqe->off = -1;
