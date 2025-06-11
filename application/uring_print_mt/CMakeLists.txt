@@ -15,6 +15,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_executable(demo
     src/uring_ctx.c
-    src/uring_fprintf.c
     src/main_demo.c
 )
+
+target_link_libraries(demo pthread)
