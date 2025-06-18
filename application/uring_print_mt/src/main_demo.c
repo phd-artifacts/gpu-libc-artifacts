@@ -9,21 +9,9 @@
 #include <linux/io_uring.h>
 #include <unistd.h>
 
-#define NUM_THREADS 4
+#define NUM_THREADS 2
 
 static uring_ctx_t g_ctx; 
-/*  Todo: clean this up. From arch wiki example:
- * Raw syscall wrappers (glibc may not have them yet).
- */
-static int io_uring_setup(unsigned entries, struct io_uring_params *p) {
-  return (int)syscall(__NR_io_uring_setup, entries, p);
-}
-static int io_uring_enter(int ring_fd, unsigned to_submit,
-                          unsigned min_complete, unsigned flags) {
-  return (int)syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete,
-                      flags, NULL, 0);
-}
-
 
 void *thread_func(void *arg) {
   char msg[64];
@@ -57,12 +45,12 @@ int main(void) {
     pthread_join(threads[i], NULL);
   }
   
-  io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-
-  sleep(5);
+  // io_uring_submit(&g_ctx);
+  // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
+  // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
+  // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
+  // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
+  sleep(2);
 
   return 0;
 }

@@ -8,25 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/syscall.h>
-#include <unistd.h>
+#include <liburing.h>
 
 #define QUEUE_DEPTH 12
 
-/*  Todo: clean this up. From arch wiki example:
- * Raw syscall wrappers (glibc may not have them yet).
- */
-static int io_uring_setup(unsigned entries, struct io_uring_params *p) {
-  return (int)syscall(__NR_io_uring_setup, entries, p);
-}
-static int io_uring_enter(int ring_fd, unsigned to_submit,
-                          unsigned min_complete, unsigned flags) {
-  return (int)syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete,
-                      flags, NULL, 0);
-}
-
 /*
- * Initialize io_uring in polling mode, then mmap the SQ/CQ rings and SQE array.
+ * Initialize io_uring in polling mode
+   and mmap the SQ/CQ rings and SQE array.
  */
 int setup_uring(uring_ctx_t *ctx) {
   struct io_uring_params p;
@@ -35,14 +23,17 @@ int setup_uring(uring_ctx_t *ctx) {
 
   memset(&p, 0, sizeof(p));
   p.flags |= IORING_SETUP_SQPOLL;
-  //   p.sq_thread_idle = 1; // in micro seconds
+  p.sq_thread_idle = 1000; // in micro seconds
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
 
   // register stderr
-  int fds[] = { STDERR_FILENO }; // STDERR_FILENO == 2
-//   int ret = io_uring_register(ctx->ring_fd, IORING_REGISTER_FILES, fds, 1);
-//   assert(ret == 0);
+  int fds[] = {STDERR_FILENO}; // STDERR_FILENO == 2
+  int ret = io_uring_register(ctx->ring_fd,
+                            IORING_REGISTER_FILES,
+                            fds, /* pointer to your array */
+                            1);  /* number of entries */
+  assert(ret == 0);
   assert(ctx->ring_fd >= 0);
 
   /* Compute how many bytes we need to mmap for SQ ring and CQ ring. */
@@ -88,8 +79,6 @@ int setup_uring(uring_ctx_t *ctx) {
   ctx->cring_mask = (unsigned *)((char *)cq_ptr + p.cq_off.ring_mask);
   ctx->cqes = (struct io_uring_cqe *)((char *)cq_ptr + p.cq_off.cqes);
 
-
-
   return 0;
 }
 
@@ -98,15 +87,19 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   unsigned tail = *ctx->sring_tail;
   unsigned idx = tail & *ctx->sring_mask;
   struct io_uring_sqe *sqe = &ctx->sqes[idx];
-  char buff[256] = {0};
+  // char buff[256] = {0};
+  char *buff = (char *)malloc(256); // todo: do not use malloc. this is dangling
+  memset(buff, 0, 256);
   assert(msg_len < 256);
   memcpy(buff, msg, msg_len);
 
   /* prepare SQE for stderr write */
   memset(sqe, 0, sizeof(*sqe));
   sqe->opcode = IORING_OP_WRITE;
-//   sqe->fd = STDERR_FILENO;
+  fprintf(stderr, "-> uring_perror called with %s\n", buff);
+  // sqe->fd = STDERR_FILENO;
   sqe->fd = 0; // idx in registered buffer
+  sqe->flags |= IOSQE_FIXED_FILE; // use registered file descriptor
   sqe->addr = (unsigned long)buff;
   sqe->len = msg_len;
   sqe->off = -1;
@@ -115,4 +108,5 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   ctx->sring_array[idx] = idx;
   tail++;
   io_uring_smp_store_release(ctx->sring_tail, tail);
+  perror("-> uring_perror submitted");
 }
