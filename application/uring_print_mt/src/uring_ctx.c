@@ -23,7 +23,7 @@ int setup_uring(uring_ctx_t *ctx) {
   int sring_sz, cring_sz;
 
   memset(&p, 0, sizeof(p));
-  p.flags |= IORING_SETUP_SQPOLL;
+  p.flags = IORING_SETUP_SQPOLL;
   p.sq_thread_idle = UINT_MAX; // in micro seconds
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
@@ -80,13 +80,15 @@ int setup_uring(uring_ctx_t *ctx) {
   ctx->cring_mask = (unsigned *)((char *)cq_ptr + p.cq_off.ring_mask);
   ctx->cqes = (struct io_uring_cqe *)((char *)cq_ptr + p.cq_off.cqes);
 
+  io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
+
   return 0;
 }
 
 // async submit print request to SQ
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   unsigned tail = *ctx->sring_tail;
-  unsigned idx = tail & *ctx->sring_mask;
+  unsigned idx = tail & *ctx->sring_mask; // TODO: check if not full
   struct io_uring_sqe *sqe = &ctx->sqes[idx];
   // char buff[256] = {0};
   char *buff = (char *)malloc(256); // todo: do not use malloc. this is dangling
@@ -97,17 +99,16 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   /* prepare SQE for stderr write */
   memset(sqe, 0, sizeof(*sqe));
   sqe->opcode = IORING_OP_WRITE;
-  fprintf(stderr, "-> uring_perror called with %s\n", buff);
   // sqe->fd = STDERR_FILENO;
   sqe->fd = 0; // idx in registered buffer
-  sqe->flags |= IOSQE_FIXED_FILE; // use registered file descriptor
+  sqe->flags = IOSQE_FIXED_FILE; // use registered file descriptor
   sqe->addr = (unsigned long)buff;
   sqe->len = msg_len;
   sqe->off = -1;
+  sqe->user_data = (uintptr_t) buff; // for later free
 
   /* publish and advance the submission ring */
-  ctx->sring_array[idx] = idx;
+  ctx->sring_array[idx] = idx; // must happen before the store_release
   tail++;
   io_uring_smp_store_release(ctx->sring_tail, tail);
-  perror("-> uring_perror submitted");
 }

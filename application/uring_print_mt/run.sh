@@ -7,6 +7,7 @@ mkdir -p build
 
 cd build
 cmake ..
+# cmake --build . -- VERBOSE=1
 cmake --build . -- VERBOSE=1
 
 ./demo
