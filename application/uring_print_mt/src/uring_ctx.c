@@ -11,7 +11,6 @@
 #include <liburing.h>
 #include <limits.h>
 
-#define QUEUE_DEPTH 12
 
 /*
  * Initialize io_uring in polling mode
@@ -24,7 +23,8 @@ int setup_uring(uring_ctx_t *ctx) {
 
   memset(&p, 0, sizeof(p));
   p.flags = IORING_SETUP_SQPOLL;
-  p.sq_thread_idle = UINT_MAX; // in micro seconds
+  p.sq_thread_idle = UINT_MAX/1000; // in micro seconds
+  // p.sq_thread_idle = 0; // in micro seconds
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
 

@@ -9,7 +9,7 @@
 #include <linux/io_uring.h>
 #include <unistd.h>
 
-#define NUM_THREADS 2
+#define NUM_THREADS 10
 
 static uring_ctx_t g_ctx; 
 
@@ -34,6 +34,7 @@ int main(void) {
   assert(&g_ctx != NULL);
 
   pthread_t threads[NUM_THREADS];
+  io_uring_enter(g_ctx.ring_fd, 1, 0, IORING_ENTER_SQ_WAKEUP); // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
 
   for (int i = 0; i < NUM_THREADS; ++i) {
     int *arg = malloc(sizeof(int));
@@ -44,16 +45,8 @@ int main(void) {
   for (int i = 0; i < NUM_THREADS; ++i) {
     pthread_join(threads[i], NULL);
   }
-  
-  // io_uring_enter(g_ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
-  // io_uring_submit(&g_ctx);
-  // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  // io_uring_enter(g_ctx.ring_fd, 1, 0, IORING_ENTER_SQ_WAKEUP); // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  // io_uring_enter(g_ctx.ring_fd, 1, 0, IORING_ENTER_SQ_WAKEUP); // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  io_uring_enter(g_ctx.ring_fd, 1, 0, IORING_ENTER_SQ_WAKEUP); // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  // sleep(5);
+
+  sleep(1);
 
   return 0;
 }

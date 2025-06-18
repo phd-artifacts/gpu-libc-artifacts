@@ -35,13 +35,7 @@ static inline int io_uring_register(unsigned int fd,
     return (int)syscall(__NR_io_uring_register, fd, opcode, arg, nr_args);
 }
 
-// extern int io_uring_register(unsigned fd,
-//                              unsigned opcode,
-//                              const void *arg,
-//                              unsigned nr_args);
-
-
-
+#define QUEUE_DEPTH 12
 
 typedef struct uring_ctx {
     int                  ring_fd;
