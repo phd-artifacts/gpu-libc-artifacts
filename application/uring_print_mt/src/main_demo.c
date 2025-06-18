@@ -50,7 +50,7 @@ int main(void) {
   // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
   // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
   // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  sleep(2);
+  sleep(5);
 
   return 0;
 }

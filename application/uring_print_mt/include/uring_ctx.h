@@ -28,6 +28,13 @@ static int io_uring_enter(int ring_fd, unsigned to_submit,
                       flags, NULL, 0);
 }
 
+static inline int io_uring_register(unsigned int fd,
+                                    unsigned int opcode,
+                                    const void *arg,
+                                    unsigned int nr_args) {
+    return (int)syscall(__NR_io_uring_register, fd, opcode, arg, nr_args);
+}
+
 // extern int io_uring_register(unsigned fd,
 //                              unsigned opcode,
 //                              const void *arg,

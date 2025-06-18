@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <liburing.h>
+#include <limits.h>
 
 #define QUEUE_DEPTH 12
 
@@ -23,7 +24,7 @@ int setup_uring(uring_ctx_t *ctx) {
 
   memset(&p, 0, sizeof(p));
   p.flags |= IORING_SETUP_SQPOLL;
-  p.sq_thread_idle = 1000; // in micro seconds
+  p.sq_thread_idle = UINT_MAX; // in micro seconds
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
 
