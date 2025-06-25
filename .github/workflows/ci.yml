@@ -64,3 +64,15 @@ jobs:
       - name: Validate Python scripts
         run: |
           python -m py_compile $(git ls-files '*.py')
+
+      - name: Build demo and check output
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake liburing-dev
+          cd application/uring_print_mt
+          mkdir build && cd build
+          cmake ..
+          cmake --build . -- VERBOSE=1
+          ./demo 2>actual_output.txt
+          sort -V actual_output.txt >sorted_actual.txt
+          diff -u ../example_output.txt sorted_actual.txt
