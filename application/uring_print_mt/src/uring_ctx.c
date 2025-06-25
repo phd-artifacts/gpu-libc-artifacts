@@ -82,7 +82,10 @@ int setup_uring(uring_ctx_t *ctx) {
 
   io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 
+  ctx->msg_pool = calloc(QUEUE_DEPTH, MSG_BUF_SIZE);
+  assert(ctx->msg_pool != NULL);
   atomic_init(&ctx->sq_tail_cache, *ctx->sring_tail);
+
   return 0;
 }
 
@@ -93,11 +96,9 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
                                             memory_order_relaxed);
   unsigned idx = tail & *ctx->sring_mask; // TODO: check if not full
   struct io_uring_sqe *sqe = &ctx->sqes[idx];
-  // char buff[256] = {0};
-  // do a scrathpad
-  char *buff = (char *)malloc(256); // todo: do not use malloc. this is dangling
-  memset(buff, 0, 256);
-  assert(msg_len < 256);
+  char *buff = ctx->msg_pool + idx * MSG_BUF_SIZE;
+  memset(buff, 0, MSG_BUF_SIZE);
+  assert(msg_len < MSG_BUF_SIZE);
   memcpy(buff, msg, msg_len);
 
   /* prepare SQE for stderr write */
@@ -109,12 +110,24 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   sqe->addr = (unsigned long)buff;
   sqe->len = msg_len;
   sqe->off = -1;
-  sqe->user_data = (uintptr_t) buff; // for later free //cookie
+  sqe->user_data = idx; // cookie for completion
 
   /* publish and advance the submission ring */
   ctx->sring_array[idx] = idx; // must happen before the store_release
-  tail++;
-  io_uring_smp_store_release(ctx->sring_tail, tail);
   io_uring_smp_store_release(ctx->sring_tail, tail + 1);
 }
+
+void uring_process_completions(uring_ctx_t *ctx) {
+  unsigned head = io_uring_smp_load_acquire(ctx->cring_head);
+  unsigned tail = *ctx->cring_tail;
+
+  while (head != tail) {
+    struct io_uring_cqe *cqe = &ctx->cqes[head & *ctx->cring_mask];
+    /* In this simple example we don't need to do anything with the
+     * completion other than acknowledge it.  The cookie (cqe->user_data)
+     * identifies which buffer was used. */
+    head++;
+  }
+
+  io_uring_smp_store_release(ctx->cring_head, head);
 }
