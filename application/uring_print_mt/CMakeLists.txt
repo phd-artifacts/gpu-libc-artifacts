@@ -13,21 +13,13 @@ if(OpenMP_C_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 endif()
 
-# Find liburing using pkg-config
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBURING REQUIRED liburing)
-message(STATUS "liburing include dirs: ${LIBURING_INCLUDE_DIRS}")
-message(STATUS "liburing libraries:    ${LIBURING_LIBRARIES}")
-
-
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
-    ${LIBURING_INCLUDE_DIRS}
 )
 
 # Link directories (usually not needed unless using a non-standard location)
-link_directories(${LIBURING_LIBRARY_DIRS})
+
 
 # Source files
 add_executable(demo
@@ -39,5 +31,4 @@ add_executable(demo
 target_link_libraries(demo
     pthread
     ${OpenMP_C_FLAGS}    # If OpenMP was found
-    ${LIBURING_LIBRARIES}
 )

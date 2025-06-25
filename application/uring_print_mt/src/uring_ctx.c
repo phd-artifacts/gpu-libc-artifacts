@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <liburing.h>
+#include <liburing/barrier.h>
 #include <limits.h>
 
 
@@ -82,13 +82,15 @@ int setup_uring(uring_ctx_t *ctx) {
 
   io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 
+  atomic_init(&ctx->sq_tail_cache, *ctx->sring_tail);
   return 0;
 }
 
 // async submit print request to SQ
 // should we mutex guard this?
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
-  unsigned tail = *ctx->sring_tail;
+  unsigned tail = atomic_fetch_add_explicit(&ctx->sq_tail_cache, 1,
+                                            memory_order_relaxed);
   unsigned idx = tail & *ctx->sring_mask; // TODO: check if not full
   struct io_uring_sqe *sqe = &ctx->sqes[idx];
   // char buff[256] = {0};
@@ -113,4 +115,6 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   ctx->sring_array[idx] = idx; // must happen before the store_release
   tail++;
   io_uring_smp_store_release(ctx->sring_tail, tail);
+  io_uring_smp_store_release(ctx->sring_tail, tail + 1);
+}
 }

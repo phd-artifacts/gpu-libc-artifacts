@@ -45,8 +45,9 @@ int main(void) {
     pthread_join(threads[i], NULL);
   }
 
-  io_uring_enter(g_ctx.ring_fd, 1, 0, IORING_ENTER_SQ_WAKEUP); // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
-  sleep(1);
+  io_uring_enter(g_ctx.ring_fd, NUM_THREADS, 0, IORING_ENTER_SQ_WAKEUP);
+  io_uring_enter(g_ctx.ring_fd, 0, NUM_THREADS, IORING_ENTER_GETEVENTS);
+  uring_process_completions(&g_ctx);
 
   return 0;
 }

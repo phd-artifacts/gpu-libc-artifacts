@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <linux/io_uring.h>
 #include <sys/syscall.h>
-#include <liburing.h>
+#include <liburing/barrier.h>
 #include <stdatomic.h>
 #include <unistd.h>
 
@@ -14,10 +14,6 @@
    - raw syscall wrappers, in case glibc does not have it
    - atomic operations for memory barriers
    **********************************/
-// #define io_uring_smp_store_release(p, v)                                  \
-//     atomic_store_explicit((_Atomic typeof(*(p)) *)(p), (v), memory_order_release)
-// #define io_uring_smp_load_acquire(p)                                      \
-//     atomic_load_explicit((_Atomic typeof(*(p)) *)(p), memory_order_acquire)
 
 static int io_uring_setup(unsigned entries, struct io_uring_params *p) {
   return (int)syscall(__NR_io_uring_setup, entries, p);
