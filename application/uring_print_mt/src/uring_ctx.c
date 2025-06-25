@@ -122,11 +122,15 @@ void uring_process_completions(uring_ctx_t *ctx) {
   unsigned tail = *ctx->cring_tail;
 
   while (head != tail) {
+    // cqes -> head is the index of the next completion
+    // cring_mask is the mask for the completion ring
+    //    i.e. a 32-bit value equal to ring_entries − 1.
+    // so we do bitwise AND of the mask and the HEAD
+    // so it wraps around the ring buffer
+    // 
     struct io_uring_cqe *cqe = &ctx->cqes[head & *ctx->cring_mask];
-    /* In this simple example we don't need to do anything with the
-     * completion other than acknowledge it.  The cookie (cqe->user_data)
-     * identifies which buffer was used. */
-    head++;
+    // the cookie cqe->user_data identifies which buffer was used
+    head++; // just advance the head since we just printed anyway
   }
 
   io_uring_smp_store_release(ctx->cring_head, head);
