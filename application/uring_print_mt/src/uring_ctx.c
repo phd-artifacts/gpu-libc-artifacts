@@ -86,11 +86,13 @@ int setup_uring(uring_ctx_t *ctx) {
 }
 
 // async submit print request to SQ
+// should we mutex guard this?
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   unsigned tail = *ctx->sring_tail;
   unsigned idx = tail & *ctx->sring_mask; // TODO: check if not full
   struct io_uring_sqe *sqe = &ctx->sqes[idx];
   // char buff[256] = {0};
+  // do a scrathpad
   char *buff = (char *)malloc(256); // todo: do not use malloc. this is dangling
   memset(buff, 0, 256);
   assert(msg_len < 256);
@@ -105,7 +107,7 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   sqe->addr = (unsigned long)buff;
   sqe->len = msg_len;
   sqe->off = -1;
-  sqe->user_data = (uintptr_t) buff; // for later free
+  sqe->user_data = (uintptr_t) buff; // for later free //cookie
 
   /* publish and advance the submission ring */
   ctx->sring_array[idx] = idx; // must happen before the store_release

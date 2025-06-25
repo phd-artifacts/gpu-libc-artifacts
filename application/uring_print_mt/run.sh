@@ -10,4 +10,13 @@ cmake ..
 # cmake --build . -- VERBOSE=1
 cmake --build . -- VERBOSE=1
 
+echo "--------------"
+./demo
+echo "--------------"
+./demo
+echo "--------------"
+./demo
+echo "--------------"
+./demo
+echo "--------------"
 ./demo

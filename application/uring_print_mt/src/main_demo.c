@@ -34,7 +34,6 @@ int main(void) {
   assert(&g_ctx != NULL);
 
   pthread_t threads[NUM_THREADS];
-  io_uring_enter(g_ctx.ring_fd, 1, 0, IORING_ENTER_SQ_WAKEUP); // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
 
   for (int i = 0; i < NUM_THREADS; ++i) {
     int *arg = malloc(sizeof(int));
@@ -46,6 +45,7 @@ int main(void) {
     pthread_join(threads[i], NULL);
   }
 
+  io_uring_enter(g_ctx.ring_fd, 1, 0, IORING_ENTER_SQ_WAKEUP); // io_uring_enter(g_ctx.ring_fd, 1, 1, IORING_ENTER_GETEVENTS);
   sleep(1);
 
   return 0;
