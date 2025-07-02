@@ -11,12 +11,6 @@ cmake ..
 cmake --build . -- VERBOSE=1
 
 echo "--------------"
-./demo
+./demo_cpu
 echo "--------------"
-./demo
-echo "--------------"
-./demo
-echo "--------------"
-./demo
-echo "--------------"
-./demo
+./demo_target

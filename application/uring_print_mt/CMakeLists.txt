@@ -22,13 +22,24 @@ include_directories(
 
 
 # Source files
-add_executable(demo
+add_executable(demo_cpu
     src/uring_ctx.c
-    src/main_demo.c
+    src/main_demo_cpu.c
+)
+
+add_executable(demo_target
+    src/uring_ctx.c
+    src/main_demo_target.c
 )
 
 # Link libraries
-target_link_libraries(demo
+target_link_libraries(demo_cpu
+    pthread
+    ${OpenMP_C_FLAGS}    # If OpenMP was found
+)
+
+# Link libraries
+target_link_libraries(demo_target
     pthread
     ${OpenMP_C_FLAGS}    # If OpenMP was found
 )

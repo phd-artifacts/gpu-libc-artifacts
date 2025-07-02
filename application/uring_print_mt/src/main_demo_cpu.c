@@ -21,6 +21,9 @@ void *thread_func(void *arg) {
   size_t len = strlen(msg);
   free(arg); // dumb i know
 
+  // sleep between 100-1000ms
+  usleep((rand() % 901 + 100) * 1000 * 10); // sleep between 100ms and 1s
+
   // send buffer to uring printer
   uring_perror(&g_ctx, msg, len);
 
