@@ -93,7 +93,7 @@ if [ "$RUNCMAKE" == "1" ] || [ "$CLEAN" == "1" ]; then
     -DCMAKE_BUILD_TYPE="$build_type" \
     -DPython3_EXECUTABLE="$PYTHON_EXEC" \
     -DLLVM_ENABLE_PROJECTS="clang;lld;" \
-    -DLLVM_ENABLE_RUNTIMES="openmp" \
+    -DLLVM_ENABLE_RUNTIMES="openmp;offload;" \
     -DCLANG_VENDOR=gpulibc-build \
     -DLIBOMPTARGET_ENABLE_DEBUG=1 \
     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc \

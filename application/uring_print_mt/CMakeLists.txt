@@ -25,9 +25,7 @@ set(GPU_ARCH "gfx90a" CACHE STRING "AMD GCN target passed to -march")
 set(OFFLOAD_FLAGS
     -fopenmp
     -fopenmp-offload-mandatory
-    -fopenmp-targets=amdgcn-amd-amhsa
-    -Xopenmp-target -march=${GPU_ARCH}
-    -nogpulib)
+    --offload-arch=gfx90a)
 
 add_executable(demo_target
     src/uring_ctx.c          # shared helpers
@@ -35,7 +33,8 @@ add_executable(demo_target
     src/main_demo_target.c)  # launches the kernel
 
 target_compile_options(demo_target PRIVATE ${OFFLOAD_FLAGS})
-target_link_options  (demo_target PRIVATE ${OFFLOAD_FLAGS} -lhsa-runtime64)
+# target_link_options  (demo_target PRIVATE ${OFFLOAD_FLAGS} -lhsa-runtime64)
+target_link_options  (demo_target PRIVATE ${OFFLOAD_FLAGS})
 target_link_libraries(demo_target PRIVATE pthread)
 
 # LTO is optional but often useful with off-load

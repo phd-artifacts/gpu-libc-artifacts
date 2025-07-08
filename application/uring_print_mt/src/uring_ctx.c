@@ -23,7 +23,7 @@ int setup_uring(uring_ctx_t *ctx) {
 
   memset(&p, 0, sizeof(p));
   p.flags = IORING_SETUP_SQPOLL;
-  p.sq_thread_idle = UINT_MAX/1000; // in micro seconds
+  p.sq_thread_idle = UINT_MAX/1000; // in micro seconds TODO: check what the kernel does with this
   // p.sq_thread_idle = 0; // in micro seconds
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);

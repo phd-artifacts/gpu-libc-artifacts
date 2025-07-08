@@ -15,6 +15,10 @@ int main(void)
     assert(&g_ctx != NULL);
 
     // copy ring ctx to device 
+    // use c++
+    // hsa pin the memory
+    // test writting/reading pointer 
+    // minimal test: mmap and register and write/read test
     #pragma omp target update to(g_ctx)
 
     // run kernel

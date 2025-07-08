@@ -35,6 +35,7 @@ void *waker_thread_func(void *arg) {
 
   while (1) {
     // wake up the uring poller
+    //TODO: check before trying to wake up
     io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
     usleep(1000); // sleep for a bit to avoid busy waiting
   }
