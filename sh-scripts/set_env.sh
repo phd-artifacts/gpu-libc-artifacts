@@ -6,6 +6,8 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+export PATH=/opt/rocm-6.4.1/bin:$PATH
+
 # Set the installation path
 INSTALL_PATH=$(realpath "$1")
 SELECTED_CLANG="$INSTALL_PATH"
@@ -16,6 +18,7 @@ if [[ ":$PATH:" != *":$INSTALL_PATH/bin:"* ]]; then
 fi
 
 export LLVM_DIR="$INSTALL_PATH/lib/cmake/llvm"
+
 
 # Export library paths if needed
 #export LD_LIBRARY_PATH="$INSTALL_PATH/lib:$LD_LIBRARY_PATH"
@@ -38,11 +41,16 @@ export CPATH="${CLANG_INCLUDE_PATH}:$CPATH"
 omp_header_path=${SELECTED_CLANG}/projects/openmp/runtime/src
 export CPATH=$omp_header_path:$CPATH
 
+### for install step
+
 export CC=clang
 export CXX=clang++
 
 # Optionally, print confirmation
 echo "Environment variables set for $SELECTED_CLANG"
+
+clang --print-resource-dir
+
 
 # Check if chosen clang is on $INSTALL_PATH/bin
 if [ -f "$INSTALL_PATH/bin/clang" ]; then

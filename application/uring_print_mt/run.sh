@@ -5,7 +5,7 @@ clang --version
 
 cd "$(dirname "$0")"
 #rm -fr build
-#mkdir -p build
+mkdir -p build
 
 cd build
 cmake ..

@@ -15,7 +15,7 @@ CONTAINER_IMAGE_PATH = (REPO_ROOT_DIRECTORY / "sifs" / "ompc-base_latest.sif").r
 SCRIPTS_DIRECTORY = REPO_ROOT_DIRECTORY / "sh-scripts"
 SET_ENV_SCRIPT_PATH = (SCRIPTS_DIRECTORY / "set_env.sh").resolve()
 INSTALL_DIRECTORY = (
-    REPO_ROOT_DIRECTORY / "llvm-infra" / "llvm-builds" / "apptainer-Debug"
+    REPO_ROOT_DIRECTORY / "llvm-infra" / "llvm-installs" / "apptainer-Debug"
 )
 
 # Determine if we are on a CI environment (to skip apptainer).
@@ -54,7 +54,8 @@ def apptainer_exec(
         str(SCRIPT_DIRECTORY),
         str(CONTAINER_IMAGE_PATH),
     ]
-    full_command = base_cmd + command_list
+    #full_command = base_cmd + command_list
+    full_command = command_list
     execute_command(full_command, working_directory)
 
 

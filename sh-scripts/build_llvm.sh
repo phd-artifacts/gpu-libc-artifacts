@@ -10,18 +10,29 @@ build_name="$base_folder/llvm-builds/apptainer-$build_type"
 parent_folder=$(dirname "$base_folder")
 
 # Activate python venv in this shell
-source $parent_folder/.venv_apptainer/bin/activate
+#source $parent_folder/.venv_apptainer/bin/activate
 
 echo "Activated python!"
 python -c "import yaml; print('pyyaml is available!')"
 
-# Export environment variables for CMake
-PYTHON_EXEC="$parent_folder/.venv_apptainer/bin/python"
-PYTHON_INCLUDE_DIR="$parent_folder/.venv_apptainer/include"
-PYTHON_LIBRARY_DIR="$parent_folder/.venv_apptainer/lib"
+# HIP stuff ???
+export PATH=/opt/rocm-6.4.1/bin:$PATH
+export PATH=/opt/rocm-6.4.1/llvm/bin:/opt/rocm-6.4.1/bin:$PATH
+export ROCM_PATH=/opt/rocm-6.4.1
+export DEVICE_LIB_PATH=$ROCM_PATH/amdgcn/bitcode
+export HIP_CLANG_PATH=$INSTALL_PREFIX/bin
+export HSA_PATH=$ROCM_PATH
+export HIP_PATH=$ROCM_PATH
+export PATH=$HIP_CLANG_PATH:$ROCM_PATH/bin:$ROCM_PATH/llvm/bin:$PATH
 
-export Python3_ROOT_DIR="$parent_folder/.venv_apptainer"
-export PATH="$parent_folder/.venv_apptainer/bin:$PATH"
+
+# Export environment variables for CMake
+#PYTHON_EXEC="$parent_folder/.venv_apptainer/bin/python"
+#PYTHON_INCLUDE_DIR="$parent_folder/.venv_apptainer/include"
+#PYTHON_LIBRARY_DIR="$parent_folder/.venv_apptainer/lib"
+
+#export Python3_ROOT_DIR="$parent_folder/.venv_apptainer"
+#export PATH="$parent_folder/.venv_apptainer/bin:$PATH"
 
 mkdir -p "$install_name"
 mkdir -p "$build_name"
@@ -70,16 +81,16 @@ if [ "$CLEAN" == "1" ]; then
   echo "Cleaning folder: $install_name"
   rm -rf "$install_name"
 
-  echo "Cleaning python folder: $parent_folder/.venv_apptainer"
-  rm -rf .venv_apptainer
+  #echo "Cleaning python folder: $parent_folder/.venv_apptainer"
+  #rm -rf .venv_apptainer
 
   echo "Cleaning completed!"
   echo "Reinstalling python..."
 
-  python3 -m venv --without-pip $parent_folder/.venv_apptainer
-  source $parent_folder/.venv_apptainer/bin/activate
-  python3 get-pip.py
-  pip install pyyaml
+  #python3 -m venv --without-pip $parent_folder/.venv_apptainer
+  #source $parent_folder/.venv_apptainer/bin/activate
+  #python3 get-pip.py
+  # pip install pyyaml
 fi
 
 # Only run CMake if RUNCMAKE flag is set or if CLEAN was performed
@@ -93,7 +104,7 @@ if [ "$RUNCMAKE" == "1" ] || [ "$CLEAN" == "1" ]; then
     -DCMAKE_BUILD_TYPE="$build_type" \
     -DPython3_EXECUTABLE="$PYTHON_EXEC" \
     -DLLVM_ENABLE_PROJECTS="clang;lld;" \
-    -DLLVM_ENABLE_RUNTIMES="openmp;offload;" \
+    -DLLVM_ENABLE_RUNTIMES="openmp;offload" \
     -DCLANG_VENDOR=gpulibc-build \
     -DLIBOMPTARGET_ENABLE_DEBUG=1 \
     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc \
@@ -107,4 +118,4 @@ fi
 
 cmake --build "$build_name"
 
-# cmake --install "$build_name" --prefix "$install_name"
+cmake --install "$build_name" --prefix "$install_name"
