@@ -18,6 +18,7 @@ python -c "import yaml; print('pyyaml is available!')"
 # HIP stuff ???
 export PATH=/opt/rocm-6.4.1/bin:$PATH
 export PATH=/opt/rocm-6.4.1/llvm/bin:/opt/rocm-6.4.1/bin:$PATH
+export LD_LIBRARY_PATH=/opt/rocm-6.4.1/lib:$LD_LIBRARY_PATH
 export ROCM_PATH=/opt/rocm-6.4.1
 export DEVICE_LIB_PATH=$ROCM_PATH/amdgcn/bitcode
 export HIP_CLANG_PATH=$INSTALL_PREFIX/bin
@@ -107,6 +108,7 @@ if [ "$RUNCMAKE" == "1" ] || [ "$CLEAN" == "1" ]; then
     -DLLVM_ENABLE_RUNTIMES="openmp;offload" \
     -DCLANG_VENDOR=gpulibc-build \
     -DLIBOMPTARGET_ENABLE_DEBUG=1 \
+    -DLIBOMPTARGET_DLOPEN_PLUGINS='cuda' \
     -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc \
     -DRUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES=libc \
     -DLLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda" \

@@ -1,0 +1,342 @@
+    1  hipcc --version
+    2  sudo apt install hipcc
+    3  hipcc --version
+    4  sudo apt uninstall hipcc
+    5  sudo apt remove hipcc
+    6  wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+    7  # 1. Add AMD’s GPG key
+    8  wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+    9  # 2. Register the ROCm 6.4 repository (adjust $DISTRO for focal/jammy/noble)
+   10  DISTRO=$(lsb_release -cs)
+   11  echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.4/${DISTRO} main"   | sudo tee /etc/apt/sources.list.d/rocm.list
+   12  sudo apt update
+   13  # 3. Install the core ROCm stack and tools
+   14  sudo apt install rocm-dkms rocm-dev
+   15  $ sudo apt-get update
+   16  sudo apt-get update
+   17  sudo apt-get dist-upgrade
+   18  sudo rm /etc/apt/sources.list.d/rocm.list
+   19  sudo apt-get update
+   20  sudo apt-get dist-upgrade
+   21  cd ~/Downloads
+   22  mkdir Downloads
+   23  cd Downloads/
+   24  sudo apt-get install ./amdgpu-install-VERSION.deb
+   25  wget https://repo.radeon.com/amdgpu-install/latest/ubuntu/jammy/amdgpu-install_6.4.60401-1_all.deb
+   26  sudo apt-get install ./amdgpu-install-VERSION.deb
+   27  sudo apt-get install ./amdgpu-install_6.4.60401-1_all.deb 
+   28  sudo apt-get install ./amdgpu-install-VERSION.deb
+   29  sudo apt-get install ./amdgpu-install_6.4.60401-1_all.deb 
+   30  hipcc --version
+   31  sudo apt install hipcc
+   32  hipcc --version
+   33  sudo apt install hipcc
+   34  amdgpu-install -y --accept-eula
+   35  hipcc --version
+   36  /opt/rocm/bin/rocminfo
+   37  ls
+   38  git config --global credential.helper 'cache --timeout=3600'
+   39  gh auth login -p https
+   40  # then login with user naem and PAT from block below
+   41  sudo apt install gh
+   42  history | vim
+   43  history 
+   44  gh auth login -p https
+   45  git clone https://github.com/phd-artifacts/gpu-libc-artifacts.git
+   46  git submodule update --init --recursive
+   47  ;s
+   48  ls
+   49  git clone https://github.com/phd-artifacts/gpu-libc-artifacts.git
+   50  cd gpu-libc-artifacts/
+   51  ls
+   52  git submodule update --init --recursive
+   53  python3 -m venv .venv
+   54  source .venv/bin/activate
+   55  pip install -r requirements.txt
+   56  hpicc
+   57  hip
+   58  hipcc
+   59  amdgpu-arch
+   60  llvm-amdgpu
+   61  ls /opt/rocm-6.4.1/
+   62  ls /opt/rocm-6.4.1/bin/
+   63  ls /opt/rocm-6.4.1/bin/hipcc --version
+   64  /opt/rocm-6.4.1/bin/hipcc --version
+   65  export PATH=/opt/rocm-6.4.1/bin:$PATH
+   66  hipcc --version
+   67  ls /opt/rocm-6.4.1/lib/
+   68  ls
+   69  ls /opt/rocm-6.4.1/lib/llvm/
+   70  ls /opt/rocm-6.4.1/lib/llvm/lib/
+   71  ls
+   72  vim sh-scripts/set_env.sh 
+   73  ls
+   74  vim helper.py 
+   75  python3 helper.py my_app build --clean
+   76  ls
+   77  touch /home/cc/gpu-libc-artifacts/sifs/ompc-base_latest.sif
+   78  python3 helper.py my_app build --clean
+   79  vim /home/cc/gpu-libc-artifacts/sh-scripts/build_llvm.sh
+   80  python3 helper.py my_app build --clean
+   81  apt install cmake
+   82  sudo apt install cmake
+   83  python3 helper.py my_app build --clean
+   84  sudo apt install ninja
+   85  sudo apt install ninja-build
+   86  python3 helper.py my_app build --clean
+   87  clang
+   88  sudo apt install clang
+   89  python3 helper.py my_app build --clean
+   90  vim /home/cc/gpu-libc-artifacts/sh-scripts/build_llvm.sh
+   91  python3 helper.py my_app build --clean
+   92  sudo apt install ccache
+   93  python3 helper.py my_app build --clean
+   94  ls
+   95  cd application/
+   96  ls
+   97  htop
+   98  source .venv/bin/activate
+   99  python3 helper.py run deviceptr_test
+  100  python3 helper.py run 
+  101  python3 helper.py run uring_print_mt
+  102  python3 helper.py uring_print_mt run
+  103  python3 helper.py deviceptr_test run
+  104  python3 helper.py uring_print_mt run
+  105  python3 helper.py deviceptr_test run
+  106  chmod +x application/deviceptr_test/run.sh 
+  107  python3 helper.py deviceptr_test run
+  108  ls /opt
+  109  python3 helper.py deviceptr_test run
+  110  which hipcc
+  111  hipcc
+  112  export PATH=/opt/rocm-6.4.1/llvm/bin:/opt/rocm-6.4.1/bin:$PATH
+  113  which hipcc
+  114  python3 helper.py my_app build --clean
+  115  python3 helper.py deviceptr_test run
+  116  ls /opt/rocm-6.4.1/amdgcn/bitcode/gfx908/
+  117  ls /opt/rocm-6.4.1/amdgcn/
+  118  ls /opt/rocm-6.4.1/amdgcn/bitcode/
+  119  ls /opt/rocm-6.4.1/lib/llvm/lib/clang/19/lib/linux/libomptarget.amdgcn.bc
+  120  python3 helper.py deviceptr_test run
+  121  ls /opt/rocm-6.4.1/amdgcn/bitcode/oclc_isa_version_908.bc
+  122  python3 helper.py my_app build --clean
+  123  source .venv/bin/activate
+  124  python3 helper.py my_app build --clean
+  125  python3 helper.py deviceptr_test run
+  126  source ./sh-scripts/set_env.sh 
+  127  /opt/rocm-6.4.1/lib/amdgcn/gfx908
+  128  /opt/rocm-6.4.1/lib/amdgcn
+  129  ls /opt/rocm-6.4.1/lib/
+  130  ls /opt/rocm-6.4.1/lib/llvm/
+  131  ls /opt/rocm-6.4.1/lib/llvm/lib
+  132  ls /opt/rocm-6.4.1/lib/llvm/lib/clang
+  133  ls /opt/rocm-6.4.1/lib/llvm/lib/clang/19/lib/amdgcn
+  134  ls /opt/rocm-6.4.1/lib/llvm/lib/clang/19/lib/amdgcn/gfx908
+  135  sudo apt install rocm-device-libs
+  136  ls /opt/rocm-6.4.1/lib/llvm/lib/clang/19/lib/amdgcn/gfx908
+  137  amdgpu-install -h
+  138  amdgpu-install --list-usecase
+  139  sudo amdgpu-install --usecase=rocm -y
+  140  sudo apt remove rocm-hip-runtime rocm-utils
+  141  sudo apt autoremove
+  142  sudo apt remove rocminfo
+  143  sudo amdgpu-install --usecase=rocm -y
+  144  sudo amdgpu-install --usecase=rocm,openmpsdk -y
+  145  which clang
+  146  source ./sh-scripts/set_env.sh 
+  147  source .venv/bin/activate
+  148  ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-builds/apptainer-Debug/
+  149  which clang
+  150  amdgpu-arch
+  151  ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/
+  152  amggpu-arch
+  153  amdgpu-arch
+  154  ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/
+  155  amdgpu-arch
+  156  source ./sh-scripts/set_env.sh 
+  157  . ~/spack/share/spack/setup-env.sh # load spack
+  158  spack info hsa-rocr-dev
+  159  source ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/
+  160  amdgpu-arch
+  161  ls
+  162  cd application/
+  163  ls
+  164  cd deviceptr_test/
+  165  ls
+  166  ./run.sh 
+  167  ./a.out 
+  168  cd ..
+  169  ls
+  170  python3 helper.py deviceptr_test run
+  171  git add .
+  172  git status
+  173  git add application/deviceptr_test/
+  174  git status
+  175  git add 
+  176  git add .
+  177  git commit -m"dirt hack to use install folder"
+  178  git config --global user.email "rodrigoceccatodefreitas@gmail.com"
+  179  git config --global user.name "rodrigo-ceccato"
+  180  git commit -m"dirt hack to use install folder"
+  181  git push
+  182  python3 helper.py deviceptr_test run
+  183  ldd application/deviceptr_test/a.out 
+  184  ldd  /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/lib/x86_64-unknown-linux-gnu/libomptarget.so.21.0git
+  185  export OMP_TARGET_OFFLOAD=MANDATORY
+  186  python3 helper.py deviceptr_test run
+  187  python3 helper.py my_app build --clean
+  188  source .venv/bin/activate
+  189  python3 helper.py my_app build --clean
+  190  python3 helper.py deviceptr_test run
+  191  source ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/
+  192  amdgpu-arch
+  193  ls /opt/rocm-6.4.1/amdgcn/bitcode/oclc_isa_version_908.bc
+  194  python3 helper.py deviceptr_test run
+  195  clang --print-targets
+  196  amdgpu-arch
+  197  python3 helper.py deviceptr_test run
+  198  which clang
+  199  ldd application/deviceptr_test/a.out 
+  200  echo LD_LIBRARY_PATH
+  201  echo $LD_LIBRARY_PATH
+  202  export LD_LIBRARY_PATH=/opt/rocm-6.4.1/lib:$LD_LIBRARY_PATH
+  203  echo $LD_LIBRARY_PATH
+  204  ls
+  205  cd application/
+  206  ls
+  207  cd deviceptr_test/
+  208  ls
+  209  clang++ -fopenmp  -g  --offload-arch=gfx908  -resource-dir=/home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/lib/clang/21  -frtlib-add-rpath  -fopenmp-targets=amdgcn-amd-amdhsa  input.cpp
+  210  ./a.out 
+  211  unset OMP_TARGET_OFFLOAD
+  212  ./a.out 
+  213  echo $?
+  214  LIBOMPTARGET_DEBUG=1 ./a.out 
+  215  hipcc --version
+  216  cd ..
+  217  python3 helper.py my_app build --clean
+  218  python3 helper.py deviceptr_test run
+  219  ls
+  220  which clang
+  221  cd application/
+  222  ls
+  223  cd deviceptr_test/
+  224  ls
+  225  LIBOMPTARGET_DEBUG=1 ./a.out 
+  226  clang++ -fopenmp --offload-arch=gfx90a input.cpp
+  227  LIBOMPTARGET_DEBUG=1 ./a.out 
+  228  cd ..
+  229  cd llvm-infra/
+  230  ls
+  231  cd llvm-project/
+  232  ls
+  233  diff --git a/offload/plugins-nextgen/amdgpu/src/rtl.cpp b/offload/plugins-nextgen/amdgpu/src/rtl.cpp
+  234  index 12c7cc62905c..999ff62eb58b 100644
+  235  --- a/offload/plugins-nextgen/amdgpu/src/rtl.cpp
+  236  +++ b/offload/plugins-nextgen/amdgpu/src/rtl.cpp
+  237  @@ -3119,6 +3119,11 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
+  238  +
+  239  +      const char *desc;
+  240  +      if (hsa_status_string(Status, &desc) != HSA_STATUS_SUCCESS)
+  241  +        desc = "Unknown error";
+  242  +      llvm::errs() << desc << "\n";
+  243  vim patch.diff
+  244  git apply patch.diff
+  245  rm patch.diff 
+  246  ls
+  247  cd ..
+  248  cd llvm-project/
+  249  cd ..
+  250  ls
+  251  cd llvm-builds/apptainer-Debug/
+  252  ls
+  253  ninja
+  254  vim /home/cc/gpu-libc-artifacts/llvm-infra/llvm-project/offload/plugins-nextgen/amdgpu/src/rtl.cpp:13
+  255  vim /home/cc/gpu-libc-artifacts/llvm-infra/llvm-project/offload/plugins-nextgen/amdgpu/src/rtl.cpp
+  256  cd ..
+  257  python3 helper.py my_app build --clean
+  258  python3 helper.py deviceptr_test run
+  259  cd ..
+  260  ls
+  261  cd ..
+  262  cd llvm-infra/llvm-project/
+  263  grep -iR "ENABLE_RSA"
+  264  cd /opt/rocm-6.4.1/lib
+  265  ls
+  266  cd
+  267  ls
+  268  cd gpu-libc-artifacts/
+  269  ls
+  270  nproc
+  271  free -h
+  272  cat /proc/cpuinfo
+  273  cd llvm-infra/
+  274  ls
+  275  cd llvm-project/
+  276  grep -R "Failed to initialize AMDGPU"
+  277  vim offload/plugins-nextgen/amdgpu/src/rtl.cpp
+  278  git diff
+  279  /usr/bin/python3 /home/cc/.vscode-server/extensions/ms-python.python-2025.10.0-linux-x64/python_files/printEnvVariablesToFile.py /home/cc/.vscode-server/extensions/ms-python.python-2025.10.0-linux-x64/python_files/deactivate/bash/envVars.txt
+  280  /opt/rocm/opencl/bin/x86_64/clinfo
+  281  /opt/rocm-6.4.1/bin/clinfo 
+  282  ls
+  283  cd gpu-libc-artifacts/
+  284  ls
+  285  cd application/
+  286  ls
+  287  cd deviceptr_test/
+  288  ls
+  289  ./a.out 
+  290  source ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/
+  291  ./a.out 
+  292  cd ..
+  293  source ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/
+  294  sudo usermod -a -G video,render $LOGNAME
+  295  cd gpu-libc-artifacts/
+  296  ls
+  297  source .venv/bin/activate
+  298  python3 helper.py deviceptr_test run
+  299  tmux
+  300  cd ..
+  301  git clone -c feature.manyFiles=true https://github.com/spack/spack.git
+  302  ls
+  303  cd spack/
+  304  ls
+  305  cd ..
+  306  . ~/spack/share/spack/setup-env.sh # load spack
+  307  spack info hsa
+  308  spack list
+  309  spack install hsa-rocr-dev
+  310  sudo apt install unzip
+  311  spack install hsa-rocr-dev
+  312  ls
+  313  cd gpu-libc-artifacts/
+  314  source ./sh-scripts/set_env.sh /home/cc/gpu-libc-artifacts/llvm-infra/llvm-installs/apptainer-Debug/
+  315  spack install hsa-rocr-dev
+  316  ls
+  317  cd application/
+  318  ls
+  319  cd deviceptr_test/
+  320  ls
+  321  ./a.out 
+  322  spack load hsa-rocr-dev@6.4.1 
+  323  ./a.out 
+  324  cd ..
+  325  python3 helper.py my_app build --clean
+  326  cd gpu-libc-artifacts/
+  327  ls
+  328  reboot
+  329  sudo reboot
+  330  ls
+  331  cd gpu-libc-artifacts/
+  332  ls
+  333  python3 helper.py deviceptr_test run
+  334  amdgpu-arch
+  335  ls
+  336  vim application/deviceptr_test/run.sh 
+  337  python3 helper.py deviceptr_test run
+  338  python3 helper.py uring_print_mt run
+  339  history
+  340  ls
+  341  git status
+  342  history > tmp_history_cc.txt
