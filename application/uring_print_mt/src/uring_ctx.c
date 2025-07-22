@@ -91,6 +91,7 @@ int setup_uring(uring_ctx_t *ctx) {
 
 // async submit print request to SQ
 // should we mutex guard this?
+#pragma omp declare target
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   unsigned tail = atomic_fetch_add_explicit(&ctx->sq_tail_cache, 1,
                                             memory_order_relaxed);
@@ -116,6 +117,7 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   ctx->sring_array[idx] = idx; // must happen before the store_release
   io_uring_smp_store_release(ctx->sring_tail, tail + 1);
 }
+#pragma omp end declare target
 
 void uring_process_completions(uring_ctx_t *ctx) {
   unsigned head = io_uring_smp_load_acquire(ctx->cring_head);
