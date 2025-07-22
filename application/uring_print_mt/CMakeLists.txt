@@ -25,7 +25,9 @@ set(GPU_ARCH "gfx90a" CACHE STRING "AMD GCN target passed to -march")
 set(OFFLOAD_FLAGS
     -fopenmp
     -fopenmp-offload-mandatory
-    --offload-arch=gfx90a)
+    -frtlib-add-rpath 
+    -fopenmp-targets=amdgcn-amd-amdhsa
+    --offload-arch=gfx908)
 
 add_executable(demo_target
     src/uring_ctx.c          # shared helpers

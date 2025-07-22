@@ -23,4 +23,4 @@ cmake --build . -- VERBOSE=1
 # echo "--------------"
 # ./demo_cpu
 echo "--------------"
-./demo_target
+LIBOMPTARGET_DEBUG=1 ./demo_target
