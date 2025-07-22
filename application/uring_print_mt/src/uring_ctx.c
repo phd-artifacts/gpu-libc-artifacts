@@ -64,6 +64,10 @@ int setup_uring(uring_ctx_t *ctx) {
   void *sq_agent_ptr = NULL;
   hsa_status = hsa_amd_memory_lock(sq_ptr, sring_sz, NULL, 0, &sq_agent_ptr);
   assert(hsa_status == HSA_STATUS_SUCCESS);
+  ctx->sring_head_dev = (char *)sq_agent_ptr + p.sq_off.head;
+  ctx->sring_tail_dev = (char *)sq_agent_ptr + p.sq_off.tail;
+  ctx->sring_mask_dev = (char *)sq_agent_ptr + p.sq_off.ring_mask;
+  ctx->sring_array_dev = (char *)sq_agent_ptr + p.sq_off.array;
 
   /* Map the completion ring buffer (or reuse the same if SINGLE_MMAP). */
   if (p.features & IORING_FEAT_SINGLE_MMAP) {
@@ -95,6 +99,7 @@ int setup_uring(uring_ctx_t *ctx) {
                                    p.sq_entries * sizeof(struct io_uring_sqe),
                                    NULL, 0, &sqe_agent_ptr);
   assert(hsa_status == HSA_STATUS_SUCCESS);
+  ctx->sqes_dev = sqe_agent_ptr;
 
   /* Grab pointers to CQ ring head/tail/mask fields and the CQE array. */
   ctx->cring_head = (unsigned *)((char *)cq_ptr + p.cq_off.head);
@@ -113,6 +118,7 @@ int setup_uring(uring_ctx_t *ctx) {
   hsa_status = hsa_amd_memory_lock(ctx->msg_pool, pool_bytes,
                                    NULL, 0, &pool_agent_ptr);
   assert(hsa_status == HSA_STATUS_SUCCESS);
+  ctx->msg_pool_dev = pool_agent_ptr; // device view of the message pool
 
   struct iovec iov = { .iov_base = ctx->msg_pool, .iov_len = pool_bytes };
   ret = io_uring_register(ctx->ring_fd, IORING_REGISTER_BUFFERS, &iov, 1);
@@ -128,10 +134,16 @@ int setup_uring(uring_ctx_t *ctx) {
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   unsigned tail = atomic_fetch_add_explicit(&ctx->sq_tail_cache, 1,
                                             memory_order_relaxed);
-  unsigned idx = tail & *ctx->sring_mask; // TODO: check if not full
-  struct io_uring_sqe *sqe = &ctx->sqes[idx];
-  char *base = omp_is_initial_device() ? ctx->msg_pool
-                                        : (char *)ctx->msg_pool_dev;
+  int host = omp_is_initial_device();
+  unsigned *mask_ptr = host ? ctx->sring_mask : ctx->sring_mask_dev;
+  unsigned *tail_ptr = host ? ctx->sring_tail : ctx->sring_tail_dev;
+  unsigned *array_ptr = host ? ctx->sring_array : ctx->sring_array_dev;
+  struct io_uring_sqe *sqe_base = host ? ctx->sqes : ctx->sqes_dev;
+  char *base = host ? ctx->msg_pool : (char *)ctx->msg_pool_dev;
+
+  unsigned idx = tail & *mask_ptr; // TODO: check if not full
+  struct io_uring_sqe *sqe = &sqe_base[idx];
+
   char *buff = base + idx * MSG_BUF_SIZE;
   memset(buff, 0, MSG_BUF_SIZE);
   assert(msg_len < MSG_BUF_SIZE);
@@ -149,8 +161,8 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   sqe->user_data = idx; // cookie for completion
 
   /* publish and advance the submission ring */
-  ctx->sring_array[idx] = idx; // must happen before the store_release
-  io_uring_smp_store_release(ctx->sring_tail, tail + 1);
+  array_ptr[idx] = idx; // must happen before the store_release
+  io_uring_smp_store_release(tail_ptr, tail + 1);
 }
 #pragma omp end declare target
 

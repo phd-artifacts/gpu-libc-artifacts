@@ -39,6 +39,12 @@ typedef struct uring_ctx {
     int                  sq_ring_sz;
     void                *cq_ring_ptr;
     int                  cq_ring_sz;
+    /* device accessible addresses */
+    void                *sring_head_dev;
+    void                *sring_tail_dev;
+    void                *sring_mask_dev;
+    void                *sring_array_dev;
+    struct io_uring_sqe *sqes_dev;
     int                  ring_fd;
     unsigned            *sring_head;
     unsigned            *sring_tail;
