@@ -76,5 +76,6 @@ int main(void) {
 
 
 
+  teardown_uring(&g_ctx);
   return 0;
 }

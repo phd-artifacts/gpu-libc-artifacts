@@ -45,12 +45,14 @@ typedef struct uring_ctx {
     unsigned            *cring_mask;
     struct io_uring_sqe *sqes;
     struct io_uring_cqe *cqes;
-    char                *msg_pool;
+    char                *msg_pool;      /* host pointer */
+    void                *msg_pool_dev;  /* device view */
     atomic_uint          sq_tail_cache;
 } uring_ctx_t;
 
 int setup_uring(uring_ctx_t *ctx);
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len);
 void uring_process_completions(uring_ctx_t *ctx);
+void teardown_uring(uring_ctx_t *ctx);
 
 #endif // URING_CONTEXT_H

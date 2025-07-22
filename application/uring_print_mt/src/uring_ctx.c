@@ -7,9 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/uio.h>
 #include <sys/mman.h>
 #include <liburing/barrier.h>
 #include <limits.h>
+#include <hsa/hsa.h>
+#include <hsa/hsa_ext_amd.h>
+#include <omp.h>
 
 
 /*
@@ -82,8 +86,21 @@ int setup_uring(uring_ctx_t *ctx) {
 
   io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 
-  ctx->msg_pool = calloc(QUEUE_DEPTH, MSG_BUF_SIZE);
-  assert(ctx->msg_pool != NULL);
+  size_t pool_bytes = QUEUE_DEPTH * MSG_BUF_SIZE;
+  int rc = posix_memalign((void **)&ctx->msg_pool, 4096, pool_bytes);
+  assert(rc == 0);
+  memset(ctx->msg_pool, 0, pool_bytes);
+
+  hsa_status_t st = hsa_init();
+  assert(st == HSA_STATUS_SUCCESS);
+  st = hsa_amd_memory_lock(ctx->msg_pool, pool_bytes, NULL, 0,
+                           &ctx->msg_pool_dev);
+  assert(st == HSA_STATUS_SUCCESS);
+
+  struct iovec iov = {.iov_base = ctx->msg_pool, .iov_len = pool_bytes};
+  ret = io_uring_register(ctx->ring_fd, IORING_REGISTER_BUFFERS, &iov, 1);
+  assert(ret == 0);
+
   atomic_init(&ctx->sq_tail_cache, *ctx->sring_tail);
 
   return 0;
@@ -97,7 +114,9 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
                                             memory_order_relaxed);
   unsigned idx = tail & *ctx->sring_mask; // TODO: check if not full
   struct io_uring_sqe *sqe = &ctx->sqes[idx];
-  char *buff = ctx->msg_pool + idx * MSG_BUF_SIZE;
+  char *base = omp_is_initial_device() ? ctx->msg_pool
+                                        : (char *)ctx->msg_pool_dev;
+  char *buff = base + idx * MSG_BUF_SIZE;
   memset(buff, 0, MSG_BUF_SIZE);
   assert(msg_len < MSG_BUF_SIZE);
   memcpy(buff, msg, msg_len);
@@ -136,4 +155,12 @@ void uring_process_completions(uring_ctx_t *ctx) {
   }
 
   io_uring_smp_store_release(ctx->cring_head, head);
+}
+
+void teardown_uring(uring_ctx_t *ctx) {
+  io_uring_unregister_buffers(ctx->ring_fd);
+  if (ctx->msg_pool) {
+    hsa_amd_memory_unlock(ctx->msg_pool);
+    free(ctx->msg_pool);
+  }
 }

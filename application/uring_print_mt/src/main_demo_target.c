@@ -25,5 +25,6 @@ int main(void)
     #pragma omp target
     uring_fn(&g_ctx);
 
+    teardown_uring(&g_ctx);
     return 0;
 }

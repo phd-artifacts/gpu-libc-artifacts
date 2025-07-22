@@ -17,7 +17,7 @@ add_executable(demo_cpu
     src/main_demo_cpu.c)
 
 target_compile_options(demo_cpu PRIVATE ${OpenMP_C_FLAGS})
-target_link_libraries(demo_cpu PRIVATE pthread OpenMP::OpenMP_C)
+target_link_libraries(demo_cpu PRIVATE pthread OpenMP::OpenMP_C hsa-runtime64)
 
 #  Executable: GPU off-load version
 set(GPU_ARCH "gfx90a" CACHE STRING "AMD GCN target passed to -march")
@@ -37,7 +37,7 @@ add_executable(demo_target
 target_compile_options(demo_target PRIVATE ${OFFLOAD_FLAGS})
 # target_link_options  (demo_target PRIVATE ${OFFLOAD_FLAGS} -lhsa-runtime64)
 target_link_options  (demo_target PRIVATE ${OFFLOAD_FLAGS})
-target_link_libraries(demo_target PRIVATE pthread)
+target_link_libraries(demo_target PRIVATE pthread hsa-runtime64)
 
 # LTO is optional but often useful with off-load
 set_property(TARGET demo_target PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
