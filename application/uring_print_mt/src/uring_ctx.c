@@ -21,6 +21,9 @@
    and mmap the SQ/CQ rings and SQE array.
  */
 int setup_uring(uring_ctx_t *ctx) {
+  hsa_status_t hsa_status = hsa_init();
+  assert(hsa_status == HSA_STATUS_SUCCESS);
+
   struct io_uring_params p;
   void *sq_ptr, *cq_ptr;
   int sring_sz, cring_sz;
@@ -56,6 +59,11 @@ int setup_uring(uring_ctx_t *ctx) {
   sq_ptr = mmap(NULL, sring_sz, PROT_READ | PROT_WRITE,
                 MAP_SHARED | MAP_POPULATE, ctx->ring_fd, IORING_OFF_SQ_RING);
   assert(sq_ptr != MAP_FAILED);
+  ctx->sq_ring_ptr = sq_ptr;
+  ctx->sq_ring_sz = sring_sz;
+  void *sq_agent_ptr = NULL;
+  hsa_status = hsa_amd_memory_lock(sq_ptr, sring_sz, NULL, 0, &sq_agent_ptr);
+  assert(hsa_status == HSA_STATUS_SUCCESS);
 
   /* Map the completion ring buffer (or reuse the same if SINGLE_MMAP). */
   if (p.features & IORING_FEAT_SINGLE_MMAP) {
@@ -65,6 +73,11 @@ int setup_uring(uring_ctx_t *ctx) {
                   MAP_SHARED | MAP_POPULATE, ctx->ring_fd, IORING_OFF_CQ_RING);
     assert(cq_ptr != MAP_FAILED);
   }
+  ctx->cq_ring_ptr = cq_ptr;
+  ctx->cq_ring_sz = cring_sz;
+  void *cq_agent_ptr = NULL;
+  hsa_status = hsa_amd_memory_lock(cq_ptr, cring_sz, NULL, 0, &cq_agent_ptr);
+  assert(hsa_status == HSA_STATUS_SUCCESS);
 
   /* Grab pointers to SQ ring head/tail/mask/array fields. */
   ctx->sring_head = (unsigned *)((char *)sq_ptr + p.sq_off.head);
@@ -77,6 +90,11 @@ int setup_uring(uring_ctx_t *ctx) {
                    PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
                    ctx->ring_fd, IORING_OFF_SQES);
   assert(ctx->sqes != MAP_FAILED);
+  void *sqe_agent_ptr = NULL;
+  hsa_status = hsa_amd_memory_lock(ctx->sqes,
+                                   p.sq_entries * sizeof(struct io_uring_sqe),
+                                   NULL, 0, &sqe_agent_ptr);
+  assert(hsa_status == HSA_STATUS_SUCCESS);
 
   /* Grab pointers to CQ ring head/tail/mask fields and the CQE array. */
   ctx->cring_head = (unsigned *)((char *)cq_ptr + p.cq_off.head);
@@ -87,22 +105,20 @@ int setup_uring(uring_ctx_t *ctx) {
   io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 
   size_t pool_bytes = QUEUE_DEPTH * MSG_BUF_SIZE;
-  int rc = posix_memalign((void **)&ctx->msg_pool, 4096, pool_bytes);
-  assert(rc == 0);
-  memset(ctx->msg_pool, 0, pool_bytes);
+  ctx->msg_pool = aligned_alloc(4096, pool_bytes);
+    assert(ctx->msg_pool != NULL);
 
-  hsa_status_t st = hsa_init();
-  assert(st == HSA_STATUS_SUCCESS);
-  st = hsa_amd_memory_lock(ctx->msg_pool, pool_bytes, NULL, 0,
-                           &ctx->msg_pool_dev);
-  assert(st == HSA_STATUS_SUCCESS);
+     memset(ctx->msg_pool, 0, pool_bytes);
+  void *pool_agent_ptr = NULL;
+  hsa_status = hsa_amd_memory_lock(ctx->msg_pool, pool_bytes,
+                                   NULL, 0, &pool_agent_ptr);
+  assert(hsa_status == HSA_STATUS_SUCCESS);
 
-  struct iovec iov = {.iov_base = ctx->msg_pool, .iov_len = pool_bytes};
+  struct iovec iov = { .iov_base = ctx->msg_pool, .iov_len = pool_bytes };
   ret = io_uring_register(ctx->ring_fd, IORING_REGISTER_BUFFERS, &iov, 1);
   assert(ret == 0);
 
-  atomic_init(&ctx->sq_tail_cache, *ctx->sring_tail);
-
+    atomic_init(&ctx->sq_tail_cache, *ctx->sring_tail);
   return 0;
 }
 
@@ -158,7 +174,7 @@ void uring_process_completions(uring_ctx_t *ctx) {
 }
 
 void teardown_uring(uring_ctx_t *ctx) {
-  io_uring_unregister_buffers(ctx->ring_fd);
+  // io_uring_unregister_buffers(ctx->ring_fd);
   if (ctx->msg_pool) {
     hsa_amd_memory_unlock(ctx->msg_pool);
     free(ctx->msg_pool);

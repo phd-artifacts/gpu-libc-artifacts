@@ -35,6 +35,10 @@ static inline int io_uring_register(unsigned int fd,
 #define MSG_BUF_SIZE 256
 
 typedef struct uring_ctx {
+    void                *sq_ring_ptr;
+    int                  sq_ring_sz;
+    void                *cq_ring_ptr;
+    int                  cq_ring_sz;
     int                  ring_fd;
     unsigned            *sring_head;
     unsigned            *sring_tail;
