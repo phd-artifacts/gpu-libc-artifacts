@@ -2,7 +2,7 @@
 .venv_apptainer/
 
 .vscode/settings.json
-./application/uring_print_mt_svm/demo
-./application/uring_print_mt_svm/main_demo_target.o
-./application/uring_print_mt_svm/uring_ctx.o
-./application/uring_print_mt_svm/uring_device.o
+application/uring_print_mt_svm/demo
+application/uring_print_mt_svm/main_demo_target.o
+application/uring_print_mt_svm/uring_ctx.o
+application/uring_print_mt_svm/uring_device.o
