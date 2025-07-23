@@ -45,6 +45,7 @@ static void make_svm_accessible(void *ptr, size_t size, hsa_agent_t agent) {
       err = "unknown";
     fprintf(stderr, "hsa_amd_svm_attributes_set failed: %s\n",
             err ? err : "");
+    exit(1);
     return;
   }
 }
@@ -95,6 +96,7 @@ int setup_uring(uring_ctx_t *ctx) {
   assert(sq_ptr != MAP_FAILED);
   ctx->sq_ring_ptr = sq_ptr;
   ctx->sq_ring_sz = sring_sz;
+  fprintf(stderr, "Submission queue map: sq_ptr: %p, sq_ring_sz: %d\n", sq_ptr, sring_sz);
   make_svm_accessible(sq_ptr, sring_sz, gpu_agent);
   ctx->sring_head_dev = (char *)sq_ptr + p.sq_off.head;
   ctx->sring_tail_dev = (char *)sq_ptr + p.sq_off.tail;
@@ -103,15 +105,18 @@ int setup_uring(uring_ctx_t *ctx) {
 
   /* Map the completion ring buffer (or reuse the same if SINGLE_MMAP). */
   if (p.features & IORING_FEAT_SINGLE_MMAP) {
+    fprintf(stderr, "Using single mmap for both SQ and CQ\n");
     cq_ptr = sq_ptr;
   } else {
     cq_ptr = mmap(NULL, cring_sz, PROT_READ | PROT_WRITE,
-                  MAP_SHARED | MAP_POPULATE, ctx->ring_fd, IORING_OFF_CQ_RING);
+                  MAP_SHARED | MAP_POPULATE | MAP_ANONYMOUS,
+                  ctx->ring_fd, IORING_OFF_CQ_RING);
     assert(cq_ptr != MAP_FAILED);
+    fprintf(stderr, "Completion queue map: cq_ptr: %p, cring_sz: %d\n", cq_ptr, cring_sz);
+    make_svm_accessible(cq_ptr, cring_sz, gpu_agent);
   }
   ctx->cq_ring_ptr = cq_ptr;
   ctx->cq_ring_sz = cring_sz;
-  make_svm_accessible(cq_ptr, cring_sz, gpu_agent);
 
   /* Grab pointers to SQ ring head/tail/mask/array fields. */
   ctx->sring_head = (unsigned *)((char *)sq_ptr + p.sq_off.head);
@@ -122,9 +127,10 @@ int setup_uring(uring_ctx_t *ctx) {
   /* Map the actual SQE array. */
   ctx->sqes = (struct io_uring_sqe *)mmap(
       NULL, p.sq_entries * sizeof(struct io_uring_sqe),
-      PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, ctx->ring_fd,
+      PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE | MAP_ANONYMOUS, ctx->ring_fd,
       IORING_OFF_SQES);
   assert(ctx->sqes != MAP_FAILED);
+  fprintf(stderr, "SQE array map: sqes: %p, entries: %d\n", ctx->sqes, p.sq_entries);
   make_svm_accessible(ctx->sqes,
                       p.sq_entries * sizeof(struct io_uring_sqe), gpu_agent);
   ctx->sqes_dev = ctx->sqes;

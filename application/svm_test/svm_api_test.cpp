@@ -177,8 +177,10 @@ int main() {
     handle_error(err, __LINE__);
 
   size_t size = 128ul * 1024 * 1024 * 1024 /* 512 MiB */;
+  // auto *mmap_ptr = (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
+  //                                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   auto *mmap_ptr = (uint8_t *)mmap(NULL, size, PROT_READ | PROT_WRITE,
-                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                                   MAP_SHARED | MAP_ANONYMOUS , -1, 0);
   assert(mmap_ptr != MAP_FAILED);
 
   hsa_amd_svm_attribute_pair_t attrs[] = {

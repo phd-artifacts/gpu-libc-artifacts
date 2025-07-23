@@ -9,13 +9,13 @@ void uring_fn(void *ptr)
 {
   int is_initial_device = omp_is_initial_device();
   assert(!is_initial_device && "NOT ON DEVICE");
-  printf("Hello from the AMD GPU!\n");
+  printf("kernel launched!\n");
   uring_perror((uring_ctx_t *)ptr,
                   "Hello from the device!\n", 24);
 
   // for some reason, if we do not wait
   // the text turns into garbage
-  for(int i = 0; i < 1e7; i++){}
+  for(int i = 0; i < 1e8; i++){}
   printf("Done!\n");
 
 }

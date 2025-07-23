@@ -34,4 +34,5 @@ export LD_LIBRARY_PATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-l5
 
 set +e
 
+ulimit -u
 ./demo
