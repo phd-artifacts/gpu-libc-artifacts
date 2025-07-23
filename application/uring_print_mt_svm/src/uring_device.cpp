@@ -15,7 +15,7 @@ void uring_fn(void *ptr)
 
   // for some reason, if we do not wait
   // the text turns into garbage
-  for(int i = 0; i < 1e8; i++){}
+  for(double i = 0; i < 1e7; i+= 0.1){}
   printf("Done!\n");
 
 }

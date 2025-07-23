@@ -21,9 +21,15 @@ int main(void)
     // minimal test: mmap and register and write/read test
     #pragma omp target update to(g_ctx)
 
+    uring_perror(&g_ctx, "Hello from the CPU...", 24);
+
     // run kernel
     #pragma omp target
     uring_fn(&g_ctx);
+
+    uring_perror(&g_ctx, "Hello from the CPU after kernel...", 36);
+
+    io_uring_enter(g_ctx.ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 
     teardown_uring(&g_ctx);
     return 0;

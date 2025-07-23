@@ -24,6 +24,8 @@ export LD_LIBRARY_PATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-l5
 
 "$CXX" --version
 
+echo "Compiling sources..."
+
 # build sources with clang++
 "$CXX" $COMMON_FLAGS -c src/uring_ctx.cpp -o uring_ctx.o
 "$CXX" $COMMON_FLAGS -c src/uring_device.cpp -o uring_device.o
@@ -33,6 +35,8 @@ export LD_LIBRARY_PATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-l5
 "$CXX" $COMMON_FLAGS uring_ctx.o uring_device.o main_demo_target.o $LINK_FLAGS -o demo
 
 set +e
+
+echo "Done compiling"
 
 ulimit -u
 ./demo
