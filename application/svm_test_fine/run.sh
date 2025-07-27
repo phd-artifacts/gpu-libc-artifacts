@@ -31,4 +31,4 @@ set +e
 
 export AMD_LOG_LEVEL=7
 
-gdb ./a.out
+./a.out

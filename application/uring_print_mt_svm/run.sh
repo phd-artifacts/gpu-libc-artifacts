@@ -18,9 +18,9 @@ export CC=clang
 export CXX=clang++
 export LDFLAGS="-fuse-ld=lld"
 
-export CPATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-l5472svnse55l3mojajd5pufrtmovqtk/include/${CPATH:+:$CPATH}
-export LIBRARY_PATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-l5472svnse55l3mojajd5pufrtmovqtk/lib${LIBRARY_PATH:+:$LIBRARY_PATH}
-export LD_LIBRARY_PATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-l5472svnse55l3mojajd5pufrtmovqtk/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+export CPATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-rlpc6ww5r7u5su3yyyz36sx4rrmdjemj/include/${CPATH:+:$CPATH}
+export LIBRARY_PATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-rlpc6ww5r7u5su3yyyz36sx4rrmdjemj/lib${LIBRARY_PATH:+:$LIBRARY_PATH}
+export LD_LIBRARY_PATH=/home/cc/spack/opt/spack/linux-zen3/hsa-rocr-dev-6.4.1-rlpc6ww5r7u5su3yyyz36sx4rrmdjemj/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 
 "$CXX" --version
 

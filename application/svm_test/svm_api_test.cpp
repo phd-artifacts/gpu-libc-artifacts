@@ -157,8 +157,8 @@ int main() {
 
   hsa_amd_memory_pool_t coarsegrained_pool;
   if (hsa_status_t err =
-          get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED>(
-              dev_agent, &coarsegrained_pool))
+          get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED>(
+              host_agent, &coarsegrained_pool))
     handle_error(err, __LINE__);
   size_t granule_size;
   if (hsa_status_t err = hsa_amd_memory_pool_get_info(
