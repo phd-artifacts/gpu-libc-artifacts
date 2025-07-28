@@ -98,20 +98,22 @@ static void check_timing(uint8_t *ptr, size_t n) {
   print_time("Maximum: ", mx);
 }
 
-/* ---------- main ---------- */
 int main() {
   /* discover agents */
   hsa_agent_t gpu{}, cpu{};
   handle_error(get_agent<HSA_DEVICE_TYPE_GPU>(&gpu), __LINE__);
   handle_error(get_agent<HSA_DEVICE_TYPE_CPU>(&cpu), __LINE__);
 
-  /* coarse-grained VRAM pool on GPU */
-  hsa_amd_memory_pool_t cg_pool{};
-  handle_error(get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED>(gpu, &cg_pool), __LINE__);
-
-  /* NEW: fine-grained DRAM pool on host */
+  // Obtain pools similar to the example from the `hsa_amd_memory_pool` API. The
+  // fine-grained pool acts as pinned host memory that the device can DMA from,
+  // the coarse-grained pool is used for allocations on the device and the
+  // kernargs pool is used to pass kernel arguments.
+  hsa_amd_memory_pool_t kernargs_pool{};
   hsa_amd_memory_pool_t fg_pool{};
+  hsa_amd_memory_pool_t cg_pool{};
+  handle_error(get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT>(cpu, &kernargs_pool), __LINE__);
   handle_error(get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED>(cpu, &fg_pool), __LINE__);
+  handle_error(get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED>(gpu, &cg_pool), __LINE__);
 
   /* check that fine-grained pool is allocatable */
   bool fg_alloc_ok = false;
@@ -136,17 +138,31 @@ int main() {
 
   /* prefetch */
   hsa_signal_t sig{0};
-  handle_error(hsa_amd_svm_prefetch_async(mmap_ptr, size, gpu, 0, nullptr, sig), __LINE__);
+  // handle_error(hsa_amd_svm_prefetch_async(mmap_ptr, size, gpu, 0, nullptr, sig), __LINE__);
 
   /* allocate coarse-grained VRAM */
   void *cg_ptr = nullptr;
   handle_error(hsa_amd_memory_pool_allocate(cg_pool, size, 0, &cg_ptr), __LINE__);
   handle_error(hsa_amd_agents_allow_access(1, &gpu, nullptr, cg_ptr), __LINE__);
 
+  // Allocate a coarse-grained integer on the device to mimic the return value
+  // buffer from the example code and initialize it to zero.
+  void *dev_ret = nullptr;
+  handle_error(hsa_amd_memory_pool_allocate(cg_pool, sizeof(int), 0, &dev_ret), __LINE__);
+  hsa_amd_memory_fill(dev_ret, 0, /*count=*/1);
+  handle_error(hsa_amd_agents_allow_access(1, &gpu, nullptr, dev_ret), __LINE__);
+
   /* allocate fine-grained DRAM */
   void *fg_ptr = nullptr;
   handle_error(hsa_amd_memory_pool_allocate(fg_pool, size, 0, &fg_ptr), __LINE__);
   handle_error(hsa_amd_agents_allow_access(1, &gpu, nullptr, fg_ptr), __LINE__);
+
+  // Allocate fine-grained memory to simulate the RPC buffer shared between the
+  // host and device. The exact size is arbitrary for this test.
+  void *rpc_buffer = nullptr;
+  const size_t rpc_size = 4096;
+  handle_error(hsa_amd_memory_pool_allocate(fg_pool, rpc_size, 0, &rpc_buffer), __LINE__);
+  handle_error(hsa_amd_agents_allow_access(1, &gpu, nullptr, rpc_buffer), __LINE__);
 
   /* benchmark */
   std::cout << "Migrated (mmap + SVM) timing:\n";
@@ -161,6 +177,8 @@ int main() {
   /* cleanup */
   handle_error(hsa_amd_memory_pool_free(cg_ptr), __LINE__);
   handle_error(hsa_amd_memory_pool_free(fg_ptr), __LINE__);
+  handle_error(hsa_amd_memory_pool_free(dev_ret), __LINE__);
+  handle_error(hsa_amd_memory_pool_free(rpc_buffer), __LINE__);
   std::cout << (int)*mmap_ptr << '\n';
   munmap(mmap_ptr, size);
 }
