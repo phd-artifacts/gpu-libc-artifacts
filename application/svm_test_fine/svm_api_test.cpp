@@ -138,7 +138,7 @@ int main() {
 
   /* prefetch */
   hsa_signal_t sig{0};
-  // handle_error(hsa_amd_svm_prefetch_async(mmap_ptr, size, gpu, 0, nullptr, sig), __LINE__);
+  //  handle_error(hsa_amd_svm_prefetch_async(mmap_ptr, size, gpu, 0, nullptr, sig), __LINE__);
 
   /* allocate coarse-grained VRAM */
   void *cg_ptr = nullptr;
