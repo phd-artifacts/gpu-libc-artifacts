@@ -14,6 +14,88 @@
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
 #include <omp.h>
+#include <iostream>
+
+static void handle_error(hsa_status_t code, uint32_t line = 0) {
+  if (code == HSA_STATUS_SUCCESS || code == HSA_STATUS_INFO_BREAK)
+    return;
+  const char *desc;
+  if (hsa_status_string(code, &desc) != HSA_STATUS_SUCCESS)
+    desc = "Unknown";
+  std::cerr << "HSA error:" << line << " " << (desc ? desc : "") << "\n";
+  std::abort();
+}
+
+template <typename E, typename F, typename C>
+static hsa_status_t iterate(F fn, C cb) {
+  auto l = [](E e, void *d) -> hsa_status_t {
+    C *u = static_cast<C *>(d);
+    return (*u)(e);
+  };
+  return fn(l, static_cast<void *>(&cb));
+}
+
+template <typename E, typename F, typename A, typename C>
+static hsa_status_t iterate(F fn, A arg, C cb) {
+  auto l = [](E e, void *d) -> hsa_status_t {
+    C *u = static_cast<C *>(d);
+    return (*u)(e);
+  };
+  return fn(arg, l, static_cast<void *>(&cb));
+}
+
+template <typename C>
+static hsa_status_t iterate_agents(C cb) {
+  return iterate<hsa_agent_t>(hsa_iterate_agents, cb);
+}
+
+template <typename C>
+static hsa_status_t iterate_agent_memory_pools(hsa_agent_t a, C cb) {
+  return iterate<hsa_amd_memory_pool_t>(hsa_amd_agent_iterate_memory_pools, a,
+                                        cb);
+}
+
+template <hsa_device_type_t DT>
+static hsa_status_t get_agent(hsa_agent_t *out) {
+  auto cb = [&](hsa_agent_t a) -> hsa_status_t {
+    hsa_device_type_t type;
+    if (hsa_agent_get_info(a, HSA_AGENT_INFO_DEVICE, &type))
+      return HSA_STATUS_ERROR;
+    if (type != DT)
+      return HSA_STATUS_SUCCESS;
+
+    if (DT == HSA_DEVICE_TYPE_GPU) {
+      hsa_agent_feature_t f;
+      if (hsa_agent_get_info(a, HSA_AGENT_INFO_FEATURE, &f))
+        return HSA_STATUS_ERROR;
+      if (!(f & HSA_AGENT_FEATURE_KERNEL_DISPATCH))
+        return HSA_STATUS_SUCCESS;
+    }
+    *out = a;
+    return HSA_STATUS_INFO_BREAK;
+  };
+  return iterate_agents(cb);
+}
+
+template <hsa_amd_memory_pool_global_flag_t FL>
+static hsa_status_t get_agent_memory_pool(hsa_agent_t ag,
+                                          hsa_amd_memory_pool_t *out) {
+  auto cb = [&](hsa_amd_memory_pool_t p) {
+    hsa_amd_segment_t seg;
+    uint32_t flags;
+    if (hsa_amd_memory_pool_get_info(p, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &seg))
+      return HSA_STATUS_ERROR;
+    if (seg != HSA_AMD_SEGMENT_GLOBAL)
+      return HSA_STATUS_SUCCESS;
+    if (hsa_amd_memory_pool_get_info(p, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS,
+                                     &flags))
+      return HSA_STATUS_ERROR;
+    if (flags & FL)
+      *out = p;
+    return HSA_STATUS_SUCCESS;
+  };
+  return iterate_agent_memory_pools(ag, cb);
+}
 
 static hsa_status_t find_gpu_agent(hsa_agent_t agent, void *data) {
   hsa_device_type_t type;
@@ -55,18 +137,45 @@ static void make_svm_accessible(void *ptr, size_t size, hsa_agent_t agent) {
    and mmap the SQ/CQ rings and SQE array.
  */
 int setup_uring(uring_ctx_t *ctx) {
-  hsa_status_t hsa_status = hsa_init();
-  assert(hsa_status == HSA_STATUS_SUCCESS);
-  hsa_agent_t gpu_agent = get_gpu_agent();
+  handle_error(hsa_init(), __LINE__);
+  hsa_agent_t gpu_agent{};
+  handle_error(get_agent<HSA_DEVICE_TYPE_GPU>(&gpu_agent), __LINE__);
+  hsa_agent_t cpu_agent{};
+  handle_error(get_agent<HSA_DEVICE_TYPE_CPU>(&cpu_agent), __LINE__);
+
+  hsa_amd_memory_pool_t fg_pool{};
+  handle_error(
+      get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED>(
+          cpu_agent, &fg_pool),
+      __LINE__);
 
   struct io_uring_params p;
-  void *sq_ptr, *cq_ptr;
+  void *ring_mem, *sqe_mem, *cq_ptr;
   int sring_sz, cring_sz;
 
   memset(&p, 0, sizeof(p));
-  p.flags = IORING_SETUP_SQPOLL;
-  p.sq_thread_idle = UINT_MAX/1000; // in micro seconds TODO: check what the kernel does with this
-  // p.sq_thread_idle = 0; // in micro seconds
+  p.flags = IORING_SETUP_SQPOLL | IORING_SETUP_NO_MMAP;
+  p.sq_thread_idle = UINT_MAX / 1000;
+
+  size_t ring_bytes = 64 * 1024; // generous for SQ/CQ rings
+  handle_error(hsa_amd_memory_pool_allocate(fg_pool, ring_bytes, 0, &ring_mem),
+               __LINE__);
+  handle_error(hsa_amd_agents_allow_access(1, &gpu_agent, nullptr, ring_mem),
+               __LINE__);
+  memset(ring_mem, 0, ring_bytes);
+  fprintf(stderr, "ring_mem host %p\n", ring_mem);
+  fprintf(stderr, "initial ring dword=%u\n", *((unsigned *)ring_mem));
+
+  size_t sqe_bytes = 64 * 1024;
+  handle_error(hsa_amd_memory_pool_allocate(fg_pool, sqe_bytes, 0, &sqe_mem),
+               __LINE__);
+  handle_error(hsa_amd_agents_allow_access(1, &gpu_agent, nullptr, sqe_mem),
+               __LINE__);
+  memset(sqe_mem, 0, sqe_bytes);
+  fprintf(stderr, "sqe_mem host %p\n", sqe_mem);
+
+  p.cq_off.user_addr = (uint64_t)ring_mem;
+  p.sq_off.user_addr = (uint64_t)ring_mem;
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
 
@@ -90,49 +199,27 @@ int setup_uring(uring_ctx_t *ctx) {
     cring_sz = sring_sz;
   }
 
-  /* Map the submission ring buffer. */
-  sq_ptr = mmap(NULL, sring_sz, PROT_READ | PROT_WRITE,
-                MAP_SHARED | MAP_POPULATE, ctx->ring_fd, IORING_OFF_SQ_RING);
-  assert(sq_ptr != MAP_FAILED);
-  ctx->sq_ring_ptr = sq_ptr;
+  /* Use caller provided ring memory */
+  ctx->sq_ring_ptr = ring_mem;
   ctx->sq_ring_sz = sring_sz;
-  fprintf(stderr, "Submission queue map: sq_ptr: %p, sq_ring_sz: %d\n", sq_ptr, sring_sz);
-  make_svm_accessible(sq_ptr, sring_sz, gpu_agent);
-  ctx->sring_head_dev = (char *)sq_ptr + p.sq_off.head;
-  ctx->sring_tail_dev = (char *)sq_ptr + p.sq_off.tail;
-  ctx->sring_mask_dev = (char *)sq_ptr + p.sq_off.ring_mask;
-  ctx->sring_array_dev = (char *)sq_ptr + p.sq_off.array;
+  ctx->sring_head_dev = (char *)ring_mem + p.sq_off.head;
+  ctx->sring_tail_dev = (char *)ring_mem + p.sq_off.tail;
+  ctx->sring_mask_dev = (char *)ring_mem + p.sq_off.ring_mask;
+  ctx->sring_array_dev = (char *)ring_mem + p.sq_off.array;
 
   /* Map the completion ring buffer (or reuse the same if SINGLE_MMAP). */
-  if (p.features & IORING_FEAT_SINGLE_MMAP) {
-    fprintf(stderr, "Using single mmap for both SQ and CQ\n");
-    cq_ptr = sq_ptr;
-  } else {
-    cq_ptr = mmap(NULL, cring_sz, PROT_READ | PROT_WRITE,
-                  MAP_SHARED | MAP_POPULATE | MAP_ANONYMOUS,
-                  ctx->ring_fd, IORING_OFF_CQ_RING);
-    assert(cq_ptr != MAP_FAILED);
-    fprintf(stderr, "Completion queue map: cq_ptr: %p, cring_sz: %d\n", cq_ptr, cring_sz);
-    make_svm_accessible(cq_ptr, cring_sz, gpu_agent);
-  }
+  cq_ptr = ring_mem;
   ctx->cq_ring_ptr = cq_ptr;
   ctx->cq_ring_sz = cring_sz;
 
   /* Grab pointers to SQ ring head/tail/mask/array fields. */
-  ctx->sring_head = (unsigned *)((char *)sq_ptr + p.sq_off.head);
-  ctx->sring_tail = (unsigned *)((char *)sq_ptr + p.sq_off.tail);
-  ctx->sring_mask = (unsigned *)((char *)sq_ptr + p.sq_off.ring_mask);
-  ctx->sring_array = (unsigned *)((char *)sq_ptr + p.sq_off.array);
+  ctx->sring_head = (unsigned *)((char *)ring_mem + p.sq_off.head);
+  ctx->sring_tail = (unsigned *)((char *)ring_mem + p.sq_off.tail);
+  ctx->sring_mask = (unsigned *)((char *)ring_mem + p.sq_off.ring_mask);
+  ctx->sring_array = (unsigned *)((char *)ring_mem + p.sq_off.array);
 
-  /* Map the actual SQE array. */
-  ctx->sqes = (struct io_uring_sqe *)mmap(
-      NULL, p.sq_entries * sizeof(struct io_uring_sqe),
-      PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE | MAP_ANONYMOUS, ctx->ring_fd,
-      IORING_OFF_SQES);
-  assert(ctx->sqes != MAP_FAILED);
-  fprintf(stderr, "SQE array map: sqes: %p, entries: %d\n", ctx->sqes, p.sq_entries);
-  make_svm_accessible(ctx->sqes,
-                      p.sq_entries * sizeof(struct io_uring_sqe), gpu_agent);
+  /* Use caller provided SQE memory */
+  ctx->sqes = (struct io_uring_sqe *)sqe_mem;
   ctx->sqes_dev = ctx->sqes;
 
   /* Grab pointers to CQ ring head/tail/mask fields and the CQE array. */
@@ -144,11 +231,13 @@ int setup_uring(uring_ctx_t *ctx) {
   io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 
   size_t pool_bytes = QUEUE_DEPTH * MSG_BUF_SIZE;
-  ctx->msg_pool = (char *)aligned_alloc(4096, pool_bytes);
-    assert(ctx->msg_pool != NULL);
-
-     memset(ctx->msg_pool, 0, pool_bytes);
-  make_svm_accessible(ctx->msg_pool, pool_bytes, gpu_agent);
+  void *pool_mem = nullptr;
+  handle_error(
+      hsa_amd_memory_pool_allocate(fg_pool, pool_bytes, 0, &pool_mem), __LINE__);
+  handle_error(hsa_amd_agents_allow_access(1, &gpu_agent, nullptr, pool_mem),
+               __LINE__);
+  ctx->msg_pool = static_cast<char *>(pool_mem);
+  memset(ctx->msg_pool, 0, pool_bytes);
   ctx->msg_pool_dev = ctx->msg_pool; // device view of the message pool
 
   struct iovec iov = { .iov_base = ctx->msg_pool, .iov_len = pool_bytes };
@@ -220,7 +309,14 @@ void uring_process_completions(uring_ctx_t *ctx) {
 
 void teardown_uring(uring_ctx_t *ctx) {
   // io_uring_unregister_buffers(ctx->ring_fd);
-  if (ctx->msg_pool) {
-    free(ctx->msg_pool);
-  }
+  if (ctx->msg_pool)
+    hsa_amd_memory_pool_free(ctx->msg_pool);
+  if (ctx->sq_ring_ptr)
+    hsa_amd_memory_pool_free(ctx->sq_ring_ptr);
+  if (ctx->sqes)
+    hsa_amd_memory_pool_free(ctx->sqes);
+}
+
+void uring_flush(uring_ctx_t *ctx) {
+  io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 }

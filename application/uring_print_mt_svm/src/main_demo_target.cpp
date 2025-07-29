@@ -1,5 +1,6 @@
 #include "uring_ctx.h"
 #include <assert.h>
+#include <stdio.h>
 #include <omp.h>
 
 void uring_fn(void *);
@@ -13,6 +14,7 @@ int main(void)
 {
     setup_uring(&g_ctx);
     assert(&g_ctx != NULL);
+    fprintf(stderr, "host sq_ring_ptr=%p sqes=%p\n", g_ctx.sq_ring_ptr, g_ctx.sqes);
 
     // copy ring ctx to device 
     // use c++
@@ -22,14 +24,15 @@ int main(void)
     #pragma omp target update to(g_ctx)
 
     uring_perror(&g_ctx, "Hello from the CPU...", 24);
+    uring_flush(&g_ctx);
 
     // run kernel
     #pragma omp target
     uring_fn(&g_ctx);
+    uring_flush(&g_ctx); // flush device submission
 
     uring_perror(&g_ctx, "Hello from the CPU after kernel...", 36);
-
-    io_uring_enter(g_ctx.ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
+    uring_flush(&g_ctx);
 
     teardown_uring(&g_ctx);
     return 0;

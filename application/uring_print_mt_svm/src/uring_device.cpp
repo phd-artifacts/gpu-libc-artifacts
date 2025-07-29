@@ -10,6 +10,8 @@ void uring_fn(void *ptr)
   int is_initial_device = omp_is_initial_device();
   assert(!is_initial_device && "NOT ON DEVICE");
   printf("kernel launched!\n");
+  uring_ctx_t *ctx = (uring_ctx_t *)ptr;
+  printf("device sq_ring_ptr=%p sqes=%p\n", ctx->sq_ring_ptr, ctx->sqes_dev);
   uring_perror((uring_ctx_t *)ptr,
                   "Hello from the device!\n", 24);
 
