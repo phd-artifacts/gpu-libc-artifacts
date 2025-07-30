@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
+#include <assert.h>
 #include <omp.h>
 
 static void handle_error(hsa_status_t code, uint32_t line = 0) {
@@ -88,10 +89,12 @@ int main() {
   for (size_t i = 0; i < count; ++i)
     buf[i] = 2;
 
-  fprintf(stderr, "host ptr=%p first=%d\n", (void *)buf, buf[0]);
+  fprintf(stderr, "host   ptr=%p first=%d\n", (void *)buf, buf[0]);
 
 #pragma omp target
   {
+    int is_initial_device = omp_is_initial_device();
+    assert(!is_initial_device && "NOT ON DEVICE");
     printf("device ptr=%p value=%d\n", buf, buf[0]);
     buf[0] = 1;
     printf("device new value=%d\n", buf[0]);
