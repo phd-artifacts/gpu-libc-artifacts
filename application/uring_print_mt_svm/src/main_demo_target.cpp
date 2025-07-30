@@ -25,6 +25,7 @@ int main(void)
     #pragma omp target update to(g_ctx)
 
     uring_perror(&g_ctx, "Hello from the CPU...", 24);
+    uring_perror(&g_ctx, "Hello again he CPU...", 24);
     uring_flush(&g_ctx);
     fprintf(stderr, "host tail before kernel=%u cache=%u\n",
             *g_ctx.sring_tail, g_ctx.sq_tail_cache.load());
@@ -32,10 +33,13 @@ int main(void)
     // run kernel
     #pragma omp target
     uring_fn(&g_ctx);
-    uring_flush(&g_ctx); // flush device submission
+
+
+    // fflush(stdout);
+    // uring_flush(&g_ctx); // flush device submission
     fprintf(stderr, "host tail after kernel=%u cache=%u\n",
             *g_ctx.sring_tail, g_ctx.sq_tail_cache.load());
-    uring_process_completions(&g_ctx);
+    // uring_process_completions(&g_ctx);
 
     uring_perror(&g_ctx, "Hello from the CPU after kernel...", 36);
     uring_flush(&g_ctx);

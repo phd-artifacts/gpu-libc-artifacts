@@ -44,12 +44,14 @@ typedef struct uring_ctx {
     void                *sring_tail_dev;
     void                *sring_mask_dev;
     void                *sring_array_dev;
+    void                *sring_flags_dev;
     struct io_uring_sqe *sqes_dev;
     int                  ring_fd;
     unsigned            *sring_head;
     unsigned            *sring_tail;
     unsigned            *sring_mask;
     unsigned            *sring_array;
+    unsigned            *sring_flags;
     unsigned            *cring_head;
     unsigned            *cring_tail;
     unsigned            *cring_mask;

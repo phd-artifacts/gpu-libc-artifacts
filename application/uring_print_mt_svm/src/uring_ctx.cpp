@@ -157,7 +157,7 @@ int setup_uring(uring_ctx_t *ctx) {
   p.flags = IORING_SETUP_SQPOLL | IORING_SETUP_NO_MMAP;
   p.sq_thread_idle = UINT_MAX / 1000;
 
-  size_t ring_bytes = 64 * 1024; // generous for SQ/CQ rings
+  size_t ring_bytes = 2 * 1024 * 1024; // plenty for ring metadata
   handle_error(hsa_amd_memory_pool_allocate(fg_pool, ring_bytes, 0, &ring_mem),
                __LINE__);
   handle_error(hsa_amd_agents_allow_access(1, &gpu_agent, nullptr, ring_mem),
@@ -168,7 +168,7 @@ int setup_uring(uring_ctx_t *ctx) {
   fprintf(stderr, "ring_mem host %p\n", ring_mem);
   fprintf(stderr, "initial ring dword=%u\n", *((unsigned *)ring_mem));
 
-  size_t sqe_bytes = 64 * 1024;
+  size_t sqe_bytes = 2 * 1024 * 1024; // submission queue entries
   handle_error(hsa_amd_memory_pool_allocate(fg_pool, sqe_bytes, 0, &sqe_mem),
                __LINE__);
   handle_error(hsa_amd_agents_allow_access(1, &gpu_agent, nullptr, sqe_mem),
@@ -178,8 +178,8 @@ int setup_uring(uring_ctx_t *ctx) {
     perror("mlock sqe_mem");
   fprintf(stderr, "sqe_mem host %p\n", sqe_mem);
 
-  p.cq_off.user_addr = (uint64_t)ring_mem;
-  p.sq_off.user_addr = (uint64_t)ring_mem;
+  p.cq_off.user_addr = (uint64_t)ring_mem; /* SQ/CQ rings */
+  p.sq_off.user_addr = (uint64_t)sqe_mem;  /* SQEs */
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
   if (ctx->ring_fd < 0) {
@@ -217,6 +217,7 @@ int setup_uring(uring_ctx_t *ctx) {
   ctx->sring_tail_dev = (char *)ring_mem + p.sq_off.tail;
   ctx->sring_mask_dev = (char *)ring_mem + p.sq_off.ring_mask;
   ctx->sring_array_dev = (char *)ring_mem + p.sq_off.array;
+  ctx->sring_flags_dev = (char *)ring_mem + p.sq_off.flags;
 
   /* Map the completion ring buffer (or reuse the same if SINGLE_MMAP). */
   cq_ptr = ring_mem;
@@ -228,6 +229,7 @@ int setup_uring(uring_ctx_t *ctx) {
   ctx->sring_tail = (unsigned *)((char *)ring_mem + p.sq_off.tail);
   ctx->sring_mask = (unsigned *)((char *)ring_mem + p.sq_off.ring_mask);
   ctx->sring_array = (unsigned *)((char *)ring_mem + p.sq_off.array);
+  ctx->sring_flags = (unsigned *)((char *)ring_mem + p.sq_off.flags);
 
   /* Use caller provided SQE memory */
   ctx->sqes = (struct io_uring_sqe *)sqe_mem;
@@ -238,8 +240,6 @@ int setup_uring(uring_ctx_t *ctx) {
   ctx->cring_tail = (unsigned *)((char *)cq_ptr + p.cq_off.tail);
   ctx->cring_mask = (unsigned *)((char *)cq_ptr + p.cq_off.ring_mask);
   ctx->cqes = (struct io_uring_cqe *)((char *)cq_ptr + p.cq_off.cqes);
-
-  io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
 
   size_t pool_bytes = QUEUE_DEPTH * MSG_BUF_SIZE;
   void *pool_mem = nullptr;
@@ -260,6 +260,11 @@ int setup_uring(uring_ctx_t *ctx) {
     return -1;
   }
 
+  /* Wake the polling thread now that everything is registered */
+  ret = io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
+  if (ret < 0)
+    perror("io_uring_enter wakeup");
+
   ctx->sq_tail_cache.store(*ctx->sring_tail, std::memory_order_relaxed);
   return 0;
 }
@@ -276,6 +281,8 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
       host ? ctx->sring_tail : (unsigned *)ctx->sring_tail_dev;
   unsigned *array_ptr =
       host ? ctx->sring_array : (unsigned *)ctx->sring_array_dev;
+  unsigned *flags_ptr =
+      host ? ctx->sring_flags : (unsigned *)ctx->sring_flags_dev;
   struct io_uring_sqe *sqe_base = host ? ctx->sqes : ctx->sqes_dev;
   char *base = host ? ctx->msg_pool : (char *)ctx->msg_pool_dev;
 
@@ -299,8 +306,12 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   sqe->user_data = idx; // cookie for completion
 
   /* publish and advance the submission ring */
-  array_ptr[idx] = idx; // must happen before the store_release
-  io_uring_smp_store_release(tail_ptr, tail + 1);
+  array_ptr[idx] = idx;
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+  __atomic_store_n(tail_ptr, tail + 1, __ATOMIC_RELAXED);
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+  if (*flags_ptr & IORING_SQ_NEED_WAKEUP)
+    *flags_ptr = 0;
 }
 #pragma omp end declare target
 
@@ -334,5 +345,9 @@ void teardown_uring(uring_ctx_t *ctx) {
 }
 
 void uring_flush(uring_ctx_t *ctx) {
-  io_uring_enter(ctx->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
+  /* Notify polling thread and wait for at least one completion */
+  int ret = io_uring_enter(ctx->ring_fd, 0, 1,
+                           IORING_ENTER_SQ_WAKEUP | IORING_ENTER_GETEVENTS);
+  if (ret < 0)
+    perror("io_uring_enter flush");
 }

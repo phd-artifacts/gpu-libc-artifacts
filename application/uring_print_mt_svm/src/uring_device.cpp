@@ -15,9 +15,6 @@ void uring_fn(void *ptr)
   uring_perror((uring_ctx_t *)ptr,
                   "Hello from the device!\n", 24);
 
-  // for some reason, if we do not wait
-  // the text turns into garbage
-  for(double i = 0; i < 1e7; i+= 0.1){}
   printf("Done!\n");
 
 }
