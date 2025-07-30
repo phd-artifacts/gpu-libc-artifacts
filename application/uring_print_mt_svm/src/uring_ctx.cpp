@@ -163,6 +163,8 @@ int setup_uring(uring_ctx_t *ctx) {
   handle_error(hsa_amd_agents_allow_access(1, &gpu_agent, nullptr, ring_mem),
                __LINE__);
   memset(ring_mem, 0, ring_bytes);
+  if (mlock(ring_mem, ring_bytes) != 0)
+    perror("mlock ring_mem");
   fprintf(stderr, "ring_mem host %p\n", ring_mem);
   fprintf(stderr, "initial ring dword=%u\n", *((unsigned *)ring_mem));
 
@@ -172,12 +174,19 @@ int setup_uring(uring_ctx_t *ctx) {
   handle_error(hsa_amd_agents_allow_access(1, &gpu_agent, nullptr, sqe_mem),
                __LINE__);
   memset(sqe_mem, 0, sqe_bytes);
+  if (mlock(sqe_mem, sqe_bytes) != 0)
+    perror("mlock sqe_mem");
   fprintf(stderr, "sqe_mem host %p\n", sqe_mem);
 
   p.cq_off.user_addr = (uint64_t)ring_mem;
   p.sq_off.user_addr = (uint64_t)ring_mem;
 
   ctx->ring_fd = io_uring_setup(QUEUE_DEPTH, &p);
+  if (ctx->ring_fd < 0) {
+    perror("io_uring_setup");
+    return -1;
+  }
+  fprintf(stderr, "ring_fd=%d\n", ctx->ring_fd);
 
   // register stderr
   int fds[] = {STDERR_FILENO}; // STDERR_FILENO == 2
@@ -185,8 +194,10 @@ int setup_uring(uring_ctx_t *ctx) {
                             IORING_REGISTER_FILES,
                             fds, /* pointer to your array */
                             1);  /* number of entries */
-  assert(ret == 0);
-  assert(ctx->ring_fd >= 0);
+  if (ret != 0) {
+    perror("io_uring_register FILES");
+    return -1;
+  }
 
   /* Compute how many bytes we need to mmap for SQ ring and CQ ring. */
   sring_sz = p.sq_off.array + p.sq_entries * sizeof(unsigned);
@@ -238,13 +249,18 @@ int setup_uring(uring_ctx_t *ctx) {
                __LINE__);
   ctx->msg_pool = static_cast<char *>(pool_mem);
   memset(ctx->msg_pool, 0, pool_bytes);
+  if (mlock(pool_mem, pool_bytes) != 0)
+    perror("mlock msg_pool");
   ctx->msg_pool_dev = ctx->msg_pool; // device view of the message pool
 
   struct iovec iov = { .iov_base = ctx->msg_pool, .iov_len = pool_bytes };
   ret = io_uring_register(ctx->ring_fd, IORING_REGISTER_BUFFERS, &iov, 1);
-  assert(ret == 0);
+  if (ret != 0) {
+    perror("io_uring_register BUFFERS");
+    return -1;
+  }
 
-    ctx->sq_tail_cache.store(*ctx->sring_tail, std::memory_order_relaxed);
+  ctx->sq_tail_cache.store(*ctx->sring_tail, std::memory_order_relaxed);
   return 0;
 }
 
