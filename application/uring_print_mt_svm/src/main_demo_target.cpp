@@ -33,7 +33,6 @@ int main(void)
     #pragma omp target
     uring_fn(&g_ctx);
     uring_flush(&g_ctx); // flush device submission
-    #pragma omp target update from(g_ctx)
     fprintf(stderr, "host tail after kernel=%u cache=%u\n",
             *g_ctx.sring_tail, g_ctx.sq_tail_cache.load());
     uring_process_completions(&g_ctx);
