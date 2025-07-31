@@ -25,7 +25,7 @@ int main(void)
     #pragma omp target update to(g_ctx)
 
     uring_perror(&g_ctx, "Hello from the CPU...", 24);
-    uring_perror(&g_ctx, "Hello again he CPU...", 24);
+    uring_perror(&g_ctx, "Hello again fr CPU...", 24);
     uring_flush(&g_ctx);
     fprintf(stderr, "host tail before kernel=%u cache=%u\n",
             *g_ctx.sring_tail, g_ctx.sq_tail_cache.load());

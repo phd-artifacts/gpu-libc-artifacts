@@ -271,7 +271,8 @@ int setup_uring(uring_ctx_t *ctx) {
 #pragma omp declare target
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   unsigned tail = ctx->sq_tail_cache.fetch_add(1, std::memory_order_relaxed);
-  int host = omp_is_initial_device();
+  // int host = omp_is_initial_device();
+  int host = 1;
   unsigned *mask_ptr =
       host ? ctx->sring_mask : (unsigned *)ctx->sring_mask_dev;
   unsigned *tail_ptr =
@@ -285,6 +286,8 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
 
   unsigned idx = tail & *mask_ptr; // TODO: check if not full
   struct io_uring_sqe *sqe = &sqe_base[idx];
+  fprintf(stderr, ">>uring sq address=%p idx=%u tail=%u\n",
+          sqe, idx, tail);
 
   char *buff = base + idx * MSG_BUF_SIZE;
   memset(buff, 0, MSG_BUF_SIZE);

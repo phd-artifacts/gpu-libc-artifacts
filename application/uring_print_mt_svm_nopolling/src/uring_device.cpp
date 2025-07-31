@@ -13,7 +13,7 @@ void uring_fn(void *ptr)
   uring_ctx_t *ctx = (uring_ctx_t *)ptr;
   printf("device sq_ring_ptr=%p sqes=%p\n", ctx->sq_ring_ptr, ctx->sqes_dev);
   uring_perror((uring_ctx_t *)ptr,
-                  "Hello from the device!\n", 24);
+                  "Hello from the device!", 24);
 
   printf("Done!\n");
 
