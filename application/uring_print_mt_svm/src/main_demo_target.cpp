@@ -87,6 +87,7 @@ int main(void)
     handle_error(get_agent<HSA_DEVICE_TYPE_GPU>(&gpu_agent), __LINE__);
     handle_error(get_agent<HSA_DEVICE_TYPE_CPU>(&cpu_agent), __LINE__);
 
+    /* get SVM memory with GPU and CPU access */
     hsa_amd_memory_pool_t fg_pool{};
     handle_error(
         get_agent_memory_pool<HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED>(
@@ -99,37 +100,21 @@ int main(void)
     g_ctx = static_cast<uring_ctx_t *>(ctx_mem);
     memset(g_ctx, 0, sizeof(*g_ctx));
 
+    /* setup io-uring with polling thread */
     if (setup_uring(g_ctx) != 0)
         return 1;
     assert(g_ctx != NULL);
-    // fprintf(stderr, "host sq_ring_ptr=%p sqes=%p\n", g_ctx->sq_ring_ptr, g_ctx->sqes);
 
-    uring_perror(g_ctx, "Hello from the CPU...\n\0", 24);
-    uring_perror(g_ctx, "Hello again from CPU...\n\0", 44);
-    // uring_flush(g_ctx);
-    // fprintf(stderr, "host tail before kernel=%u cache=%u\n",
-    //         *g_ctx->sring_tail, g_ctx->sq_tail_cache.load());
+    uring_perror(g_ctx, "aaaaaaaaaaa from the CPU...\n\0", 24);
+    uring_perror(g_ctx, "bbbbbbbbbbb from CPU...\n\0", 44);
 
-    // run kernel
+    /* run kernel and emit messages from the device */
     #pragma omp target
     uring_fn(g_ctx);
 
-
-    // fflush(stdout);
-    // uring_flush(&g_ctx); // flush device submission
-    // fprintf(stderr, "host tail after kernel=%u cache=%u\n",
-    //         *g_ctx->sring_tail, g_ctx->sq_tail_cache.load());
-    // uring_process_completions(&g_ctx);
-
     sleep(5);
 
-    uring_perror(g_ctx, "Hello from the CPU after kernel...\n\0", 36);
-    // uring_flush(g_ctx);
-    // uring_process_completions(g_ctx);
-
-    /* ensure all outstanding io_uring operations have completed */
-    // uring_flush(g_ctx);
-    // uring_process_completions(g_ctx);
+    uring_perror(g_ctx, "ccccccccccc CPU after kernel...\n\0", 36);
 
     teardown_uring(g_ctx);
     hsa_amd_memory_pool_free(g_ctx);

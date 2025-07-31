@@ -39,13 +39,6 @@ typedef struct uring_ctx {
     int                  sq_ring_sz;
     void                *cq_ring_ptr;
     int                  cq_ring_sz;
-    /* device accessible addresses */
-    void                *sring_head_dev;
-    void                *sring_tail_dev;
-    void                *sring_mask_dev;
-    void                *sring_array_dev;
-    void                *sring_flags_dev;
-    struct io_uring_sqe *sqes_dev;
     int                  ring_fd;
     unsigned            *sring_head;
     unsigned            *sring_tail;
@@ -57,15 +50,12 @@ typedef struct uring_ctx {
     unsigned            *cring_mask;
     struct io_uring_sqe *sqes;
     struct io_uring_cqe *cqes;
-    char                *msg_pool;      /* host pointer */
-    void                *msg_pool_dev;  /* device view */
+    char                *msg_pool;
     std::atomic_uint     sq_tail_cache;
 } uring_ctx_t;
 
 int setup_uring(uring_ctx_t *ctx);
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len);
-void uring_process_completions(uring_ctx_t *ctx);
 void teardown_uring(uring_ctx_t *ctx);
-void uring_flush(uring_ctx_t *ctx);
 
 #endif // URING_CONTEXT_H
