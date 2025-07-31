@@ -105,8 +105,10 @@ int main(void)
         return 1;
     assert(g_ctx != NULL);
 
-    uring_perror(g_ctx, "aaaaaaaaaaa from the CPU...\n\0", 24);
-    uring_perror(g_ctx, "bbbbbbbbbbb from CPU...\n\0", 44);
+    constexpr char msg1[] = "aaaaaaaaaaa from the CPU...\n";
+    constexpr char msg2[] = "bbbbbbbbbbb from CPU...\n";
+    uring_perror(g_ctx, msg1, sizeof(msg1) - 1);
+    uring_perror(g_ctx, msg2, sizeof(msg2) - 1);
 
     /* run kernel and emit messages from the device */
     #pragma omp target
@@ -114,7 +116,8 @@ int main(void)
 
     sleep(5);
 
-    uring_perror(g_ctx, "ccccccccccc CPU after kernel...\n\0", 36);
+    constexpr char msg3[] = "ccccccccccc CPU after kernel...\n";
+    uring_perror(g_ctx, msg3, sizeof(msg3) - 1);
 
     teardown_uring(g_ctx);
     hsa_amd_memory_pool_free(g_ctx);

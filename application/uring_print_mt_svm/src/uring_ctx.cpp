@@ -266,7 +266,12 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   struct io_uring_sqe *sqe_base = ctx->sqes;
   char *base = ctx->msg_pool;
 
-  unsigned idx = tail & *mask_ptr; // TODO: check if not full
+  unsigned head = io_uring_smp_load_acquire(ctx->sring_head);
+  unsigned entries = *mask_ptr + 1;
+  while (tail - head >= entries)
+    head = io_uring_smp_load_acquire(ctx->sring_head);
+
+  unsigned idx = tail & *mask_ptr;
   struct io_uring_sqe *sqe = &sqe_base[idx];
 
   char *buff = base + idx * MSG_BUF_SIZE;
@@ -302,5 +307,13 @@ void teardown_uring(uring_ctx_t *ctx) {
     hsa_amd_memory_pool_free(ctx->sq_ring_ptr);
   if (ctx->sqes)
     hsa_amd_memory_pool_free(ctx->sqes);
+}
+
+bool uring_has_pending(const uring_ctx_t *ctx) {
+  unsigned sq_head = io_uring_smp_load_acquire(ctx->sring_head);
+  unsigned sq_tail = *ctx->sring_tail;
+  unsigned cq_head = io_uring_smp_load_acquire(ctx->cring_head);
+  unsigned cq_tail = *ctx->cring_tail;
+  return (sq_head != sq_tail) || (cq_head != cq_tail);
 }
 

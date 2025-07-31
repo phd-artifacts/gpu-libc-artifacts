@@ -10,10 +10,10 @@ void uring_fn(void *ptr)
   int is_initial_device = omp_is_initial_device();
   assert(!is_initial_device && "NOT ON DEVICE");
   uring_ctx_t *ctx = (uring_ctx_t *)ptr;
-  uring_perror((uring_ctx_t *)ptr,
-                  "Hello from the device!\n\0", 24);
-  uring_perror((uring_ctx_t *)ptr,
-                  "Hello again from the device!\n\0", 34);
+  constexpr char msg1[] = "Hello from the device!\n";
+  constexpr char msg2[] = "Hello again from the device!\n";
+  uring_perror(ctx, msg1, sizeof(msg1) - 1);
+  uring_perror(ctx, msg2, sizeof(msg2) - 1);
 
 
 }
