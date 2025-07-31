@@ -10,3 +10,7 @@ application/uring_svm_minimal/demo
 application/uring_svm_minimal/main_demo_target.o
 application/uring_svm_minimal/uring_ctx.o
 application/uring_svm_minimal/uring_device.o
+application/uring_print_mt_svm_nopolling/demo
+application/uring_print_mt_svm_nopolling/main_demo_target.o
+application/uring_print_mt_svm_nopolling/uring_ctx.o
+application/uring_print_mt_svm_nopolling/uring_device.o
