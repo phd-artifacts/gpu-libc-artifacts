@@ -105,8 +105,8 @@ int main(void)
         return 1;
     assert(g_ctx != NULL);
 
-    constexpr char msg1[] = "aaaaaaaaaaa from the CPU...\n";
-    constexpr char msg2[] = "bbbbbbbbbbb from CPU...\n";
+    constexpr char msg1[] = "First hello from the CPU...\n";
+    constexpr char msg2[] = "Second hello from CPU (again)...\n";
     uring_perror(g_ctx, msg1, sizeof(msg1) - 1);
     uring_perror(g_ctx, msg2, sizeof(msg2) - 1);
 
@@ -114,9 +114,7 @@ int main(void)
     #pragma omp target
     uring_fn(g_ctx);
 
-    sleep(5);
-
-    constexpr char msg3[] = "ccccccccccc CPU after kernel...\n";
+    constexpr char msg3[] = "A third hello from the, CPU after kernel launch...\n";
     uring_perror(g_ctx, msg3, sizeof(msg3) - 1);
 
     teardown_uring(g_ctx);

@@ -36,7 +36,6 @@ echo "Compiling sources..."
 
 set +e
 
-echo "Done compiling"
+printf "Done compiling\n\n\n\n"
 
-ulimit -u
 ./demo

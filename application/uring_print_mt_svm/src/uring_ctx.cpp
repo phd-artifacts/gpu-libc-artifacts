@@ -153,7 +153,7 @@ int setup_uring(uring_ctx_t *ctx) {
   void *ring_mem, *sqe_mem, *cq_ptr;
   int sring_sz, cring_sz;
 
-  memset(&p, 0, sizeof(p));
+  memset(&p, 0, sizeof(p)); /* io_uring expects a zeroed data struct */
   p.flags = IORING_SETUP_SQPOLL | IORING_SETUP_NO_MMAP;
   p.sq_thread_idle = UINT_MAX / 1000;
 
@@ -165,8 +165,6 @@ int setup_uring(uring_ctx_t *ctx) {
   memset(ring_mem, 0, ring_bytes);
   if (mlock(ring_mem, ring_bytes) != 0)
     perror("mlock ring_mem");
-  fprintf(stderr, "ring_mem host %p\n", ring_mem);
-  fprintf(stderr, "initial ring dword=%u\n", *((unsigned *)ring_mem));
 
   size_t sqe_bytes = 2 * 1024 * 1024; // submission queue entries
   handle_error(hsa_amd_memory_pool_allocate(fg_pool, sqe_bytes, 0, &sqe_mem),
@@ -176,7 +174,6 @@ int setup_uring(uring_ctx_t *ctx) {
   memset(sqe_mem, 0, sqe_bytes);
   if (mlock(sqe_mem, sqe_bytes) != 0)
     perror("mlock sqe_mem");
-  fprintf(stderr, "sqe_mem host %p\n", sqe_mem);
 
   p.cq_off.user_addr = (uint64_t)ring_mem; /* SQ/CQ rings */
   p.sq_off.user_addr = (uint64_t)sqe_mem;  /* SQEs */
@@ -186,14 +183,13 @@ int setup_uring(uring_ctx_t *ctx) {
     perror("io_uring_setup");
     return -1;
   }
-  fprintf(stderr, "ring_fd=%d\n", ctx->ring_fd);
 
-  // register stderr
-  int fds[] = {STDERR_FILENO}; // STDERR_FILENO == 2
+  /* register STDERR in the list of fixed descriptors */
+  int fds[] = {STDERR_FILENO};
   int ret = io_uring_register(ctx->ring_fd,
                             IORING_REGISTER_FILES,
                             fds, /* pointer to your array */
-                            1);  /* number of entries */
+                            1  /* number of entries */ );
   if (ret != 0) {
     perror("io_uring_register FILES");
     return -1;
@@ -266,6 +262,8 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   struct io_uring_sqe *sqe_base = ctx->sqes;
   char *base = ctx->msg_pool;
 
+  // TODO: this is an std::atomic_load_explicit
+  //       does this work on the GPU?
   unsigned head = io_uring_smp_load_acquire(ctx->sring_head);
   unsigned entries = *mask_ptr + 1;
   while (tail - head >= entries)
@@ -282,8 +280,9 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
   /* prepare SQE for stderr write */
   memset(sqe, 0, sizeof(*sqe));
   sqe->opcode = IORING_OP_WRITE;
-  sqe->fd = 0; // idx in registered buffer
-  sqe->flags = IOSQE_FIXED_FILE; // use registered file descriptor
+  sqe->fd = 0; /* index of our STDERR in the fixed file descriptor list*/
+  sqe->flags = IOSQE_FIXED_FILE; /* use registered file descriptor,
+                                  required for io_uring polling mode */
   sqe->addr = (unsigned long)buff;
   sqe->len = msg_len;
   sqe->off = -1;
@@ -291,16 +290,16 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
 
   /* publish and advance the submission ring */
   array_ptr[idx] = idx;
-  __atomic_thread_fence(__ATOMIC_RELEASE);
-  __atomic_store_n(tail_ptr, tail + 1, __ATOMIC_RELAXED);
-  __atomic_thread_fence(__ATOMIC_SEQ_CST);
-  if (*flags_ptr & IORING_SQ_NEED_WAKEUP)
-    *flags_ptr = 0;
+  // TODO: this is an std::atomic_store_explicit
+  //       does this work on the GPU?
+  io_uring_smp_store_release(tail_ptr, tail + 1);
 }
 #pragma omp end declare target
 
 void teardown_uring(uring_ctx_t *ctx) {
-  // io_uring_unregister_buffers(ctx->ring_fd);
+  /* TODO: need an actual wait for completion here */
+  sleep(5);
+
   if (ctx->msg_pool)
     hsa_amd_memory_pool_free(ctx->msg_pool);
   if (ctx->sq_ring_ptr)
