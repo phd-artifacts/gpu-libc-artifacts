@@ -7,6 +7,9 @@ We use pinned memory and shared virtual memory (SVM) to allow the GPU to write d
 The directories under `application/experiments` preserve the
 steps taken while developing this demo, validating the enviroment and the feasibility of the experiment. They contain isolated tests for individual runtime features.
 
+<img width="2826" height="1872" alt="uringprint" src="https://github.com/user-attachments/assets/aef03464-3a4d-44b5-b9a2-d1ba3e725148" />
+
+
 ## Helper script
 
 The `helper.py` script orchestrates common tasks:
