@@ -32,9 +32,3 @@ sudo apt-get update
 sudo apt-get install -y rocm-hip-sdk
 ```
 
-
-## Continuous Integration
-
-CI checks that Python helpers compile and the final application builds
-successfully using system Clang and ROCm packages.
-
