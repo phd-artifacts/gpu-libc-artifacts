@@ -4,10 +4,53 @@ This is a quick reference to the installation steps that I followed. I tested th
 
 # ROCm
 
-The ROCm versino in the repository was too old, so we used the versinon from the [AMD website](https://amdgpu-install.readthedocs.io/en/latest/install-installing.html?highlight=ubuntu#ubuntu-and-debian-based-systems). An important step is to add the user to the video group: 
+The ROCm versino in the repository was too old, so we used the versinon from the [AMD website](https://amdgpu-install.readthedocs.io/en/latest/install-installing.html?highlight=ubuntu#ubuntu-and-debian-based-systems). An important step is to add the user to the video group:
 
 ```bash
 sudo usermod -a -G video $USER
+```
+
+## Python environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Ubuntu packages
+
+```bash
+sudo apt install gh
+sudo apt install cmake
+sudo apt install ninja-build
+sudo apt install clang
+sudo apt install ccache
+sudo apt-get update
+sudo apt-get dist-upgrade
+
+mkdir Downloads
+cd Downloads/
+wget https://repo.radeon.com/amdgpu-install/latest/ubuntu/jammy/amdgpu-install_6.4.60401-1_all.deb
+
+sudo apt-get install ./amdgpu-install_6.4.60401-1_all.deb
+sudo amdgpu-install --usecase=rocm,openmpsdk -y
+```
+
+```bash
+sudo apt install rocminfo
+sudo usermod -a -G render cc
+```
+
+```bash
+rocminfo | grep 'Name:' | grep gfx
+```
+
+## ROCm 6.x environment
+
+```bash
+export PATH=/opt/rocm-6.4.1/bin:$PATH
+ls /opt/rocm-6.4.1
 ```
 
 # HSA
