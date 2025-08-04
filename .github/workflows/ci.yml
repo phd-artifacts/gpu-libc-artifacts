@@ -15,51 +15,26 @@ jobs:
         with:
           python-version: '3.x'
 
-
-      - name: Install Apptainer
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends apptainer \
-            || sudo apt-get install -y --no-install-recommends singularity-container
-          if ! command -v apptainer >/dev/null && command -v singularity >/dev/null; then
-            sudo ln -s $(command -v singularity) /usr/local/bin/apptainer
-          fi
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo rm -rf /usr/share/doc /usr/share/man /usr/share/locale
+          sudo apt-get install -y build-essential cmake clang liburing-dev gnupg wget lsb-release
+          DISTRO=$(lsb_release -cs)
+          wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+          echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.4/ ${DISTRO} main" | sudo tee /etc/apt/sources.list.d/rocm.list
+          sudo apt-get update
+          sudo apt-get install -y rocm-hip-sdk
 
-      - name: Free disk space
+      - name: Validate Python scripts
         run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"/CodeQL
-          df -h
+          python -m py_compile $(git ls-files '*.py')
 
-      - name: Restore Apptainer cache
-        id: cache-dir
-        uses: actions/cache@v3
-        with:
-          path: sifs/.cache
-          key: ${{ runner.os }}-apptainer-cache-${{ hashFiles('sifs/get_image.sh') }}
-
-      - name: Restore SIF from cache
-        id: cache-sif
-        uses: actions/cache@v3
-        with:
-          path: sifs/ompc-base_latest.sif
-          key: ${{ runner.os }}-sif-${{ hashFiles('sifs/get_image.sh') }}
-
-      - name: Download SIF image
-        if: steps.cache-sif.outputs.cache-hit != 'true'
-        env:
-          APPTAINER_CACHEDIR: ${{ github.workspace }}/sifs/.cache
-          SINGULARITY_CACHEDIR: ${{ github.workspace }}/sifs/.cache
-          APPTAINER_TMPDIR: ${{ github.workspace }}/sifs/.cache/tmp
+      - name: Build final demo
         run: |
-          cd sifs
-          bash get_image.sh
+          cd application/uring_print_mt_svm
+          clang++ -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+            --offload-arch=gfx908 -Iinclude src/*.cpp \
+            -L/opt/rocm/lib -L/opt/rocm/lib64 -lhsa-runtime64 -o demo
 
       - name: Validate Python scripts
         run: |

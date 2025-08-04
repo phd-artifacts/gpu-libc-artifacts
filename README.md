@@ -1,17 +1,37 @@
-# GPU libc artifacts
+# GPU I/O with io_uring
 
-This repository contains a minimal demonstration using Linux io_uring and multiple threads. The program is located in `application/uring_print_mt`.
+This demo uses Linux `io_uring` to let a GPU issue print operations without resorting to RPC calls on the host, which is the current approach in [LLVM libc for GPUs](https://libc.llvm.org/gpu/). The ultimate goal is to improve performance by avoiding the two RPC hops, the shared buffer copy, and the necessity of user-level polling threads.
 
-## Execution flow
-1. `setup_uring()` configures an `io_uring` instance in polling mode and maps the submission and completion rings.
-2. Ten worker threads are created in `main_demo.c`. Each formats a message and dispatches it through `uring_perror()`.
-3. `uring_perror()` enqueues a write operation using the io_uring API and uses memory barriers (from `liburing/barrier.h`) to publish descriptors.
-4. After all threads have finished, `uring_process_completions()` drains the completion queue.
+We use pinned memory and shared virtual memory (SVM) to allow the GPU to write directly to the `io_uring` submission queue, which the kernel polls in the background. 
 
-## Memory barriers
-The program uses `io_uring_smp_store_release` and `io_uring_smp_load_acquire` from `liburing/barrier.h` to ensure ordering between producers and consumers.
+The directories under `application/experiments` preserve the
+steps taken while developing this demo, validating the enviroment and the feasibility of the experiment. They contain isolated tests for individual runtime features.
 
-## Data structure
-`uring_ctx_t` defined in `application/uring_print_mt/include/uring_ctx.h` holds pointers to ring buffer fields, SQEs, CQEs, a message pool and a cached tail pointer.
 
-An example output for a single run is stored in `application/uring_print_mt/example_output.txt`.
+todo: describe the system, simplify python script, explain sh scripts
+descriv ethe enviroment
+
+## Installation on Ubuntu
+
+The programs were developed on Ubuntu 22.04 nodes of the Chameleon Cloud.
+To reproduce the environment install Clang, CMake and ROCm:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y clang build-essential cmake liburing-dev \
+    gnupg wget lsb-release
+# ROCm repository
+DISTRO=$(lsb_release -cs)
+wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.4/ ${DISTRO} main" | \
+    sudo tee /etc/apt/sources.list.d/rocm.list
+sudo apt-get update
+sudo apt-get install -y rocm-hip-sdk
+```
+
+
+## Continuous Integration
+
+CI checks that Python helpers compile and the final application builds
+successfully using system Clang and ROCm packages.
+

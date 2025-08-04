@@ -11,15 +11,12 @@ import click
 SCRIPT_DIRECTORY = Path(__file__).resolve().parent
 REPO_ROOT_DIRECTORY = SCRIPT_DIRECTORY
 
-CONTAINER_IMAGE_PATH = (REPO_ROOT_DIRECTORY / "sifs" / "ompc-base_latest.sif").resolve()
 SCRIPTS_DIRECTORY = REPO_ROOT_DIRECTORY / "sh-scripts"
 SET_ENV_SCRIPT_PATH = (SCRIPTS_DIRECTORY / "set_env.sh").resolve()
 INSTALL_DIRECTORY = (
     REPO_ROOT_DIRECTORY / "llvm-infra" / "llvm-installs" / "apptainer-Debug"
 )
 
-# Determine if we are on a CI environment (to skip apptainer).
-IS_CI_ENV = os.getenv("IS_CI_ENV", "false").lower() == "true"
 
 # =============================================================================
 # Helper Functions
@@ -36,36 +33,10 @@ def execute_command(
         sys.exit(1)
 
 
-def apptainer_exec(
-    command_list: list[str], working_directory: Path = REPO_ROOT_DIRECTORY
-) -> None:
-    if not CONTAINER_IMAGE_PATH.is_file():
-        click.secho(
-            f"Error: Container image not found at {CONTAINER_IMAGE_PATH}", fg="red"
-        )
-        sys.exit(1)
-
-    base_cmd = [
-        "apptainer",
-        "exec",
-        "--userns",
-        "--no-privs",
-        "--bind",
-        str(SCRIPT_DIRECTORY),
-        str(CONTAINER_IMAGE_PATH),
-    ]
-    #full_command = base_cmd + command_list
-    full_command = command_list
-    execute_command(full_command, working_directory)
-
-
 def run_in_environment(
     command_list: list[str], working_directory: Path = REPO_ROOT_DIRECTORY
 ) -> None:
-    if IS_CI_ENV:
-        execute_command(command_list, working_directory)
-    else:
-        apptainer_exec(command_list, working_directory)
+    execute_command(command_list, working_directory)
 
 
 def build_application(clean: bool = False, run_cmake: bool = False) -> None:
@@ -99,21 +70,6 @@ def run_application(application_folder: str) -> None:
     ], working_directory=application_directory)
 
 
-def print_shell_help() -> None:
-    base_shell_cmd = [
-        "apptainer",
-        "shell",
-        "--bind",
-        str(SCRIPT_DIRECTORY),
-        str(CONTAINER_IMAGE_PATH),
-    ]
-    env_cmd = f"source {SET_ENV_SCRIPT_PATH} {INSTALL_DIRECTORY}"
-
-    click.echo("To open an Apptainer shell, run:")
-    click.echo(f"  {' '.join(base_shell_cmd)}")
-    click.echo("\nThen inside that shell, you might run:")
-    click.echo(f"  {env_cmd}")
-    click.echo("to source the environment.\n")
 
 
 @click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
@@ -141,9 +97,6 @@ def cli(ctx, application_folder):
 
         elif cmd == "run":
             run_application(application_folder)
-
-        elif cmd == "shell":
-            print_shell_help()
 
         elif cmd == "ninja":
             run_ninja_command()
