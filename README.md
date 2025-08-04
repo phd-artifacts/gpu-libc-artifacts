@@ -1,6 +1,6 @@
 # GPU I/O with io_uring
 
-This demo uses Linux `io_uring` to let a GPU issue print operations without resorting to RPC calls on the host, which is the current approach in [LLVM libc for GPUs](https://libc.llvm.org/gpu/). The ultimate goal is to improve performance by avoiding the two RPC hops, the shared buffer copy, and the necessity of user-level polling threads.
+This repository contains a demo that uses Linux `io_uring` to let a GPU issue print operations without resorting to RPC calls on the host, which is the current approach in [LLVM libc for GPUs](https://libc.llvm.org/gpu/). The ultimate goal is to improve performance by avoiding the two RPC hops, the shared buffer copy, and the necessity of user-level polling threads.
 
 We use pinned memory and shared virtual memory (SVM) to allow the GPU to write directly to the `io_uring` submission queue, which the kernel polls in the background. 
 
@@ -9,21 +9,18 @@ steps taken while developing this demo, validating the enviroment and the feasib
 
 <img width="2826" height="1872" alt="uringprint" src="https://github.com/user-attachments/assets/aef03464-3a4d-44b5-b9a2-d1ba3e725148" />
 
-CPU starts io_uring with kernel polling thread
-SVM page-locked memory for the queue
-GPU writes to the submission queue, no syscall required
+As the figure below shows, the CPU starts an io_uring with a kernel polling thread, and allocate the queues using SVM. The GPU then writes to the submission queue without the need for a syscall. The CPU then read the queue and print the results.
 
 
 
-
-## Helper script
+# Helper scripts
 
 The `helper.py` script orchestrates common tasks:
 
 * `python helper.py build-llvm` – build LLVM using the script in `sh-scripts`.
 * `python helper.py <application>` – run an application.
 
-# Experimetns
+# Experiments
 
 | Experiment               | What it tests                                                                                                                                                                                                   | Contribution toward the demo                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
