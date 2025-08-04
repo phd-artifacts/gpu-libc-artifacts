@@ -15,3 +15,4 @@ application/experiments/uring_print_mt_svm_nopolling/demo
 application/experiments/uring_print_mt_svm_nopolling/main_demo_target.o
 application/experiments/uring_print_mt_svm_nopolling/uring_ctx.o
 application/experiments/uring_print_mt_svm_nopolling/uring_device.o
+.vscode

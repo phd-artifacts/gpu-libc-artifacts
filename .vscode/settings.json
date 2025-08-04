@@ -1,9 +1,0 @@
-{
-  "files.associations": {
-    "*.rs": "rust",
-    "*.cu": "cuda",
-    "*.inc": "c",
-    "functional": "cpp",
-    "chrono": "cpp"
-  }
-}
