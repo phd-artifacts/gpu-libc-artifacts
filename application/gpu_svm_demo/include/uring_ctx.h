@@ -57,6 +57,5 @@ typedef struct uring_ctx {
 int setup_uring(uring_ctx_t *ctx);
 void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len);
 void teardown_uring(uring_ctx_t *ctx);
-bool uring_has_pending(const uring_ctx_t *ctx);
 
 #endif // URING_CONTEXT_H

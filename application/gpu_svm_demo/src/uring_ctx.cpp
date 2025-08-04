@@ -308,12 +308,3 @@ void teardown_uring(uring_ctx_t *ctx) {
   if (ctx->sqes)
     hsa_amd_memory_pool_free(ctx->sqes);
 }
-
-bool uring_has_pending(const uring_ctx_t *ctx) {
-  unsigned sq_head = io_uring_smp_load_acquire(ctx->sring_head);
-  unsigned sq_tail = *ctx->sring_tail;
-  unsigned cq_head = io_uring_smp_load_acquire(ctx->cring_head);
-  unsigned cq_tail = *ctx->cring_tail;
-  return (sq_head != sq_tail) || (cq_head != cq_tail);
-}
-
