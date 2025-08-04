@@ -21,9 +21,10 @@ jobs:
           sudo apt-get install -y build-essential cmake clang liburing-dev gnupg wget lsb-release
           DISTRO=$(lsb_release -cs)
           wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -
+          echo "deb [arch=amd64] https://repo.radeon.com/amdgpu/6.4/ubuntu/ ${DISTRO} main" | sudo tee /etc/apt/sources.list.d/amdgpu.list
           echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.4/ ${DISTRO} main" | sudo tee /etc/apt/sources.list.d/rocm.list
           sudo apt-get update
-          sudo apt-get install -y rocm-hip-sdk
+          sudo apt-get install -y rocm-hip-runtime rocm-hip-runtime-dev hipcc rocminfo
 
       - name: Validate Python scripts
         run: |
