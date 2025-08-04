@@ -297,8 +297,9 @@ void uring_perror(uring_ctx_t *ctx, const char *msg, size_t msg_len) {
 #pragma omp end declare target
 
 void teardown_uring(uring_ctx_t *ctx) {
-  /* TODO: need an actual wait for completion here */
-  sleep(5);
+  auto ring_fd = ctx->ring_fd;
+  io_uring_enter(ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
+  sleep(3);
 
   if (ctx->msg_pool)
     hsa_amd_memory_pool_free(ctx->msg_pool);
