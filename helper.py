@@ -73,10 +73,25 @@ def run_application(application_folder: str) -> None:
 
 
 @click.command(context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
-@click.argument("application_folder", required=True)
+@click.argument("primary_arg", required=True)
 @click.pass_context
-def cli(ctx, application_folder):
+def cli(ctx, primary_arg):
     leftover_args = list(ctx.args)
+
+    # Special top-level command to build LLVM infrastructure.
+    if primary_arg == "build-llvm":
+        if leftover_args:
+            click.secho(f"Unknown option: {' '.join(leftover_args)}", fg="red")
+            sys.exit(1)
+        build_application(clean=True)
+        return
+
+    # Otherwise treat the first argument as the application folder.
+    application_folder = primary_arg
+
+    if not leftover_args:
+        run_application(application_folder)
+        return
 
     while leftover_args:
         cmd = leftover_args.pop(0)

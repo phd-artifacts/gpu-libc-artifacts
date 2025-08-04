@@ -7,9 +7,12 @@ We use pinned memory and shared virtual memory (SVM) to allow the GPU to write d
 The directories under `application/experiments` preserve the
 steps taken while developing this demo, validating the enviroment and the feasibility of the experiment. They contain isolated tests for individual runtime features.
 
+## Helper script
 
-todo: describe the system, simplify python script, explain sh scripts
-descriv ethe enviroment
+The `helper.py` script orchestrates common tasks:
+
+* `python helper.py build-llvm` – build LLVM using the script in `sh-scripts`.
+* `python helper.py <application>` – run an application.
 
 ## Installation on Ubuntu
 
